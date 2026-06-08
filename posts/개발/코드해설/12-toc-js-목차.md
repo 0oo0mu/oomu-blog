@@ -14,6 +14,124 @@ excerpt: 게시글을 스크롤하면 오른쪽 목차에서 현재 읽는 섹�
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+const Toc = {
+  _rafId: null,
+  _scrollHandler: null,
+  _headings: [],
+
+  build({ bodyId = 'postBody', tocId = 'tocList', sidebarId = 'tocSidebar' } = {}) {
+    this._cleanup();
+
+    const body    = document.getElementById(bodyId);
+    const tocList = document.getElementById(tocId);
+    const sidebar = document.getElementById(sidebarId);
+    if (!body || !tocList || !sidebar) return;
+
+    const headings = Array.from(body.querySelectorAll('h2, h3, h4'));
+
+    if (headings.length === 0) {
+      sidebar.style.display = 'none';
+      return;
+    }
+
+    sidebar.style.display = '';
+    tocList.innerHTML = '';
+
+    headings.forEach((heading, idx) => {
+      const id = `h-${idx}-` + heading.textContent
+        .toLowerCase()
+        .replace(/[^\w\s가-힣]/g, '')
+        .replace(/\s+/g, '-')
+        .slice(0, 40);
+
+      heading.id = id;
+
+      const level = parseInt(heading.tagName[1]);
+      const li = document.createElement('li');
+      li.className = `toc-item level-${level}`;
+
+      const a = document.createElement('a');
+      a.href = `#${id}`;
+      a.textContent = heading.textContent;
+
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        this._setActive(tocList, id);
+        const target = document.getElementById(id);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+
+      li.appendChild(a);
+      tocList.appendChild(li);
+    });
+
+    this._headings = headings;
+
+    this._scrollHandler = () => {
+      if (this._rafId) cancelAnimationFrame(this._rafId);
+      this._rafId = requestAnimationFrame(() => {
+        this._updateActive(tocList);
+      });
+    };
+
+    window.addEventListener('scroll', this._scrollHandler, { passive: true });
+    this._updateActive(tocList);
+  },
+
+  _updateActive(tocList) {
+    const headerHeight = parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue('--header-height') || '60'
+    );
+    const threshold = window.scrollY + headerHeight + 16;
+
+    let activeId = null;
+    for (const heading of this._headings) {
+      if (heading.offsetTop <= threshold) {
+        activeId = heading.id;
+      } else {
+        break;
+      }
+    }
+
+    if (activeId) {
+      this._setActive(tocList, activeId);
+    }
+  },
+
+  _setActive(tocList, id) {
+    tocList.querySelectorAll('a.active').forEach(a => a.classList.remove('active'));
+    const link = tocList.querySelector(`a[href="#${id}"]`);
+    if (link) {
+      link.classList.add('active');
+      link.scrollIntoView({ block: 'nearest' });
+    }
+  },
+
+  _cleanup() {
+    if (this._scrollHandler) {
+      window.removeEventListener('scroll', this._scrollHandler);
+      this._scrollHandler = null;
+    }
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+    }
+    this._headings = [];
+  },
+};
+
+export default Toc;
+```
+
+---
+
 ## build() — 목차 생성
 
 ```javascript

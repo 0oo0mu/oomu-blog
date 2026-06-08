@@ -24,6 +24,93 @@ renderer.js → 수신 → render(posts, query)
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App from '../core/app.js';
+
+const Renderer = {
+  init() {
+    App.on('posts:filtered', ({ posts, query = '' }) => {
+      this.render(posts, query);
+    });
+  },
+
+  render(posts, query = '') {
+    const grid = document.getElementById('postsGrid');
+    if (!grid) return;
+
+    if (posts.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">${query ? '🔍' : '📭'}</div>
+          <p>${query
+            ? `<strong>"${escapeHtml(query)}"</strong>에 대한 결과가 없어요.`
+            : '해당하는 포스트가 없어요.'
+          }</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = posts.map(post => this._cardHTML(post, query)).join('');
+  },
+
+  _cardHTML(post, query) {
+    const href    = `post.html?file=${encodeURIComponent(post.file)}`;
+    const title   = query ? highlight(escapeHtml(post.title   || ''), query) : escapeHtml(post.title   || '');
+    const excerpt = query ? highlight(escapeHtml(post.excerpt || ''), query) : escapeHtml(post.excerpt || '');
+
+    const categoryBadge = post.category
+      ? `<span class="post-category">${escapeHtml(post.category)}</span>`
+      : '';
+
+    const tagsHTML = (post.tags || [])
+      .map(t => `<span class="post-tag">#${escapeHtml(t)}</span>`)
+      .join('');
+
+    return `
+      <a class="post-card"
+         href="${href}"
+         data-file="${escapeHtml(post.file)}">
+        ${categoryBadge}
+        <h2 class="post-card-title">${title}</h2>
+        <p class="post-card-excerpt">${excerpt}</p>
+        <div class="post-card-meta">
+          <span class="post-date">${formatDate(post.date)}</span>
+          <div class="post-tags">${tagsHTML}</div>
+        </div>
+      </a>
+    `;
+  },
+};
+
+function highlight(text, query) {
+  if (!query) return text;
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return text;
+  const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  return text.replace(new RegExp(`(${pattern})`, 'gi'), '<mark>$1</mark>');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+export default Renderer;
+```
+
+---
+
 ## render() — 목록 그리기
 
 ```javascript

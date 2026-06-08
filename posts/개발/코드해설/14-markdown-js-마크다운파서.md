@@ -17,6 +17,64 @@ excerpt: 게시글이 .md 파일로 저장되고 웹에서 읽힐 때 어떤 과
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+const Markdown = {
+  parse(mdText) {
+    if (typeof window.marked === 'undefined') {
+      console.error('[Markdown] marked.js가 로드되지 않았습니다.');
+      return `<p>마크다운 파서를 불러올 수 없습니다.</p>`;
+    }
+    return window.marked.parse(mdText);
+  },
+
+  parseFrontMatter(raw) {
+    const meta = {};
+
+    const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    if (!match) return { meta, content: raw };
+
+    match[1].split('\n').forEach(line => {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) return;
+
+      const key = line.slice(0, colonIdx).trim();
+      const val = line.slice(colonIdx + 1).trim();
+
+      if (key === 'tags') {
+        meta.tags = val
+          .replace(/[\[\]]/g, '')
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean);
+      } else {
+        meta[key] = val;
+      }
+    });
+
+    return { meta, content: match[2] };
+  },
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    if (window.marked) {
+      window.marked.setOptions({
+        gfm:    true,
+        breaks: true,
+      });
+    }
+  });
+}
+
+export default Markdown;
+```
+
+---
+
 ## Front Matter란?
 
 ```markdown

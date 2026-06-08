@@ -38,6 +38,202 @@ excerpt: 폴더 경로 문자열을 받아서 계층 구조 트리를 만드는 
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App    from '../core/app.js';
+import Router from '../core/router.js';
+
+const Sidebar = {
+  _allPosts: [],
+
+  init() {
+    App.on('posts:loaded', ({ posts }) => {
+      this._allPosts = posts;
+      this._build(posts);
+    });
+
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const content   = document.getElementById('sidebarContent');
+    if (toggleBtn && content) {
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = content.classList.toggle('open');
+        toggleBtn.querySelector('.toggle-arrow').textContent = isOpen ? '▲' : '▼';
+      });
+    }
+  },
+
+  _build(posts) {
+    const treeEl = document.getElementById('categoryTree');
+    if (!treeEl) return;
+
+    if (!treeEl.parentElement.classList.contains('category-tree-wrap')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'category-tree-wrap';
+      treeEl.parentNode.insertBefore(wrap, treeEl);
+      wrap.appendChild(treeEl);
+
+      wrap.addEventListener('scroll', () => {
+        const atBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 4;
+        wrap.classList.toggle('scrolled-end', atBottom);
+      });
+    }
+
+    const root = { _posts: posts.length, _children: {} };
+
+    posts.forEach(post => {
+      if (!post.category) return;
+      const parts = post.category.split('/').filter(Boolean);
+      let node = root;
+
+      parts.forEach((part, depth) => {
+        if (!node._children[part]) {
+          node._children[part] = { _posts: 0, _children: {} };
+        }
+        if (depth === parts.length - 1) {
+          node._children[part]._posts++;
+        }
+        node = node._children[part];
+      });
+    });
+
+    calcTotal(root);
+
+    treeEl.innerHTML = '';
+
+    const allLi = document.createElement('li');
+    allLi.className = 'tree-node';
+    allLi.innerHTML = `
+      <button class="tree-item tree-item-all active" data-category="all">
+        <span class="tree-name">🗂 전체</span>
+        <span class="tree-count">${posts.length}</span>
+      </button>`;
+    allLi.querySelector('.tree-item').addEventListener('click', () => {
+      this._select('all');
+    });
+    treeEl.appendChild(allLi);
+
+    Object.entries(root._children).forEach(([name, node]) => {
+      treeEl.appendChild(this._renderNode(name, node, ''));
+    });
+  },
+
+  _renderNode(name, node, parentPath) {
+    const fullPath   = parentPath ? `${parentPath}/${name}` : name;
+    const hasChildren = Object.keys(node._children).length > 0;
+
+    const li = document.createElement('li');
+    li.className = 'tree-node';
+    li.dataset.path = fullPath;
+
+    const btn = document.createElement('button');
+    btn.className = 'tree-item';
+    btn.dataset.category = fullPath;
+    btn.innerHTML = `
+      ${hasChildren ? `<span class="tree-arrow">▶</span>` : `<span class="tree-arrow" style="opacity:0">▶</span>`}
+      <span class="tree-name">📁 ${name}</span>
+      <span class="tree-count">${node._total}</span>
+    `;
+
+    btn.addEventListener('click', () => {
+      if (hasChildren) {
+        li.classList.toggle('open');
+      }
+      this._select(fullPath);
+    });
+
+    li.appendChild(btn);
+
+    if (hasChildren) {
+      const ul = document.createElement('ul');
+      ul.className = 'tree-children';
+
+      Object.entries(node._children).forEach(([childName, childNode]) => {
+        ul.appendChild(this._renderNode(childName, childNode, fullPath));
+      });
+
+      li.appendChild(ul);
+    }
+
+    return li;
+  },
+
+  _select(category) {
+    const treeEl = document.getElementById('categoryTree');
+
+    const path = window.location.pathname;
+    const isIndex = path.endsWith('index.html')
+                 || path.endsWith('/')
+                 || path === '';
+
+    if (!isIndex) {
+      window.location.href = category === 'all'
+        ? 'index.html'
+        : `index.html?category=${encodeURIComponent(category)}`;
+      return;
+    }
+
+    const postView = document.getElementById('postView');
+    const isInPostView = postView && !postView.classList.contains('view-hidden');
+
+    if (isInPostView) {
+      App.emit('nav:category-from-post', { category });
+      Router.goList();
+      return;
+    }
+
+    if (treeEl) {
+      treeEl.querySelectorAll('.tree-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.category === category);
+      });
+
+      if (category !== 'all') {
+        const parts = category.split('/');
+        const ancestors = parts.slice(0, -1);
+        let cur = '';
+        ancestors.forEach(part => {
+          cur = cur ? `${cur}/${part}` : part;
+          const node = treeEl.querySelector(`[data-path="${cur}"]`);
+          if (node) node.classList.add('open');
+        });
+      }
+    }
+
+    App.emit('filter:category', { category });
+  },
+
+  applyFromUrl(category) {
+    const treeEl = document.getElementById('categoryTree');
+
+    if (treeEl && category && category !== 'all') {
+      const parts = category.split('/');
+      let cur = '';
+      parts.forEach(part => {
+        cur = cur ? `${cur}/${part}` : part;
+        const node = treeEl.querySelector(`[data-path="${cur}"]`);
+        if (node) node.classList.add('open');
+      });
+    }
+
+    this._select(category);
+  },
+};
+
+function calcTotal(node) {
+  const childrenTotal = Object.values(node._children).reduce((sum, child) => {
+    return sum + calcTotal(child);
+  }, 0);
+  node._total = node._posts + childrenTotal;
+  return node._total;
+}
+
+export default Sidebar;
+```
+
+---
+
 ## 트리 데이터 구조 만들기
 
 ```javascript

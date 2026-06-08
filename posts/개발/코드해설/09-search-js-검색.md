@@ -35,6 +35,71 @@ t → 200ms 경과 → 검색 실행!
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App from '../core/app.js';
+
+const Search = {
+  init() {
+    const input    = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('searchClear');
+    if (!input) return;
+
+    let debounce = null;
+
+    input.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        const query = input.value.trim();
+
+        if (clearBtn) {
+          clearBtn.style.display = query ? 'flex' : 'none';
+        }
+
+        App.emit('filter:search', { query });
+      }, 200);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        App.emit('filter:search', { query: '' });
+        input.focus();
+      });
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        input.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+        App.emit('filter:search', { query: '' });
+        input.blur();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const tag = document.activeElement?.tagName;
+      const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+      if (e.key === '/' && !isTyping) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    });
+  },
+};
+
+export default Search;
+```
+
+---
+
+---
+
 ## 디바운스 구현
 
 ```javascript

@@ -15,6 +15,46 @@ excerpt: 다크모드 설정이 새로고침 후에도 유지되는 이유. loca
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+const Storage = {
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.warn('[Storage] 저장 실패:', key, e);
+    }
+  },
+
+  get(key, defaultValue = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw !== null ? JSON.parse(raw) : defaultValue;
+    } catch (e) {
+      console.warn('[Storage] 읽기 실패:', key, e);
+      return defaultValue;
+    }
+  },
+
+  remove(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('[Storage] 삭제 실패:', key, e);
+    }
+  },
+};
+
+export default Storage;
+```
+
+---
+
+---
+
 ## localStorage란?
 
 브라우저가 제공하는 **영구 저장공간**입니다.  

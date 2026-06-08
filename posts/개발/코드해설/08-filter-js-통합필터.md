@@ -18,6 +18,146 @@ excerpt: 카테고리, 태그, 검색어 세 가지가 동시에 작동하는 AN
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App from '../core/app.js';
+
+const Filter = {
+  state: {
+    category: 'all',
+    tag:      'all',
+    query:    '',
+    sort:     'newest',
+  },
+
+  _allPosts: [],
+
+  init() {
+    App.on('posts:loaded', ({ posts }) => {
+      this._allPosts = posts;
+      this._renderTagChips();
+      this._bindSortBtns();
+      this._applyFilter();
+    });
+
+    App.on('filter:category', ({ category }) => {
+      this.state.category = category;
+      this._applyFilter();
+    });
+
+    App.on('filter:search', ({ query }) => {
+      this.state.query = query;
+      this._updateResultInfo();
+      this._applyFilter();
+    });
+  },
+
+  _renderTagChips() {
+    const container = document.getElementById('tagChips');
+    if (!container) return;
+    const tags = ['all', ...new Set(this._allPosts.flatMap(p => p.tags || []))];
+    container.innerHTML = tags.map(tag => `
+      <button class="chip ${tag === this.state.tag ? 'active' : ''}" data-value="${tag}">
+        ${tag === 'all' ? '전체' : '#' + tag}
+      </button>
+    `).join('');
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      this.state.tag = btn.dataset.value;
+      this._applyFilter();
+    });
+  },
+
+  _bindSortBtns() {
+    const bar = document.getElementById('sortBar');
+    if (!bar) return;
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sort-btn');
+      if (!btn) return;
+      bar.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      this.state.sort = btn.dataset.sort;
+      this._applyFilter();
+    });
+  },
+
+  _applyFilter() {
+    const { category, tag, query, sort } = this.state;
+
+    let filtered = this._allPosts.filter(post => {
+      let catOk;
+      if (category === 'all') {
+        catOk = true;
+      } else {
+        const postCat = post.category || '';
+        catOk = postCat === category || postCat.startsWith(category + '/');
+      }
+      const tagOk    = tag === 'all' || (post.tags || []).includes(tag);
+      const searchOk = !query || this._matchSearch(post, query);
+      return catOk && tagOk && searchOk;
+    });
+
+    const dateVal = (post, isNewest) => {
+      const d = post.date ? new Date(post.date).getTime() : NaN;
+      if (isNaN(d)) return isNewest ? -Infinity : Infinity;
+      return d;
+    };
+
+    if (sort === 'newest') {
+      filtered = [...filtered].sort((a, b) => {
+        const diff = dateVal(b, true) - dateVal(a, true);
+        return diff !== 0 ? diff : (a.file || '').localeCompare(b.file || '');
+      });
+    } else if (sort === 'oldest') {
+      filtered = [...filtered].sort((a, b) => {
+        const diff = dateVal(a, false) - dateVal(b, false);
+        return diff !== 0 ? diff : (b.file || '').localeCompare(a.file || '');
+      });
+    } else if (sort === 'title') {
+      filtered = [...filtered].sort((a, b) =>
+        (a.title || '').localeCompare(b.title || '', 'ko')
+      );
+    }
+
+    this._updateResultInfo(filtered.length);
+    App.emit('posts:filtered', { posts: filtered, query });
+  },
+
+  _matchSearch(post, query) {
+    const searchText = [
+      post.title || '', post.excerpt || '',
+      post.category || '', ...(post.tags || []),
+    ].join(' ').toLowerCase();
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return words.every(word => searchText.includes(word));
+  },
+
+  _updateResultInfo(count) {
+    const el = document.getElementById('searchResultInfo');
+    if (!el) return;
+    const { query } = this.state;
+    if (!query) { el.innerHTML = ''; return; }
+    if (count === undefined) {
+      el.innerHTML = `<strong>"${query}"</strong> 검색 중...`;
+    } else if (count === 0) {
+      el.innerHTML = `<strong>"${query}"</strong> 검색 결과 없음`;
+    } else {
+      el.innerHTML = `<strong>"${query}"</strong> 검색 결과 <strong>${count}개</strong>`;
+    }
+  },
+};
+
+export default Filter;
+```
+
+---
+
 ## 상태 관리
 
 ```javascript

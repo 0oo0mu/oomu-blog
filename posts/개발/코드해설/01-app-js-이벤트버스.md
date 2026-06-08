@@ -15,6 +15,59 @@ excerpt: 블로그의 모든 기능이 서로 소통하는 방법. 이벤트 버
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+const App = {
+  /** 등록된 모듈들 { 이름: 모듈객체 } */
+  modules: {},
+
+  /** 이벤트 리스너들 { 이벤트명: [콜백, ...] } */
+  _listeners: {},
+
+  register(name, module) {
+    this.modules[name] = module;
+    if (typeof module.init === 'function') {
+      module.init();
+    }
+  },
+
+  emit(event, data) {
+    const listeners = this._listeners[event] || [];
+    listeners.forEach(cb => {
+      try {
+        cb(data);
+      } catch (e) {
+        console.error(`[App] 이벤트 핸들러 오류 (${event}):`, e);
+      }
+    });
+  },
+
+  on(event, cb) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(cb);
+
+    return () => {
+      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
+    };
+  },
+
+  get(name) {
+    return this.modules[name];
+  },
+};
+
+export default App;
+```
+
+---
+
+---
+
 ## 왜 이게 필요할까?
 
 검색창(`search.js`)이 검색어를 받으면, 카드 목록(`renderer.js`)이 필터링된 결과를 보여줘야 합니다.

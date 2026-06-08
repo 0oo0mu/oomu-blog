@@ -11,6 +11,30 @@ excerpt: 같은 코드가 내 컴퓨터에서는 에디터를 보여주고, 배�
 내 컴퓨터에서 블로그를 열면 헤더에 **"글쓰기"** 버튼이 보입니다.  
 하지만 GitHub Pages에 배포된 사이트에서는 그 버튼이 없어요.
 
+---
+
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+const Env = {
+  isLocal: ['localhost', '127.0.0.1', ''].includes(window.location.hostname),
+
+  get name() {
+    return this.isLocal ? 'local' : 'web';
+  },
+
+  get baseUrl() {
+    return window.location.origin;
+  },
+};
+
+export default Env;
+```
+
+---
+
 같은 코드인데 어떻게 다르게 동작할까요?  
 `env.js`가 현재 실행 환경을 감지하기 때문입니다.
 

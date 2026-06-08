@@ -6,6 +6,83 @@ tags: [JavaScript, SPA, 라우터]
 excerpt: 페이지를 이동하지 않고 화면만 바꾸는 SPA 라우터. history.pushState와 이벤트 위임을 한 줄씩 파헤칩니다.
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App from './app.js';
+
+const Router = {
+  _savedScrollY: 0,
+
+  init() {
+    const params = new URLSearchParams(window.location.search);
+    const file = params.get('file');
+    if (file) {
+      this._applyView('post', { file }, false);
+    } else {
+      this._applyView('list', {}, false);
+    }
+
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('.post-card[data-file]');
+      if (card) {
+        e.preventDefault();
+        this.goPost(card.dataset.file);
+        return;
+      }
+
+      if (e.target.closest('#backBtn')) {
+        e.preventDefault();
+        this.goList();
+      }
+    });
+
+    window.addEventListener('popstate', (e) => {
+      const state = e.state || { view: 'list' };
+      this._applyView(state.view, state, false);
+    });
+  },
+
+  goPost(file) {
+    this._savedScrollY = window.scrollY;
+    history.pushState({ view: 'post', file }, '', `?file=${encodeURIComponent(file)}`);
+    this._applyView('post', { file }, true);
+  },
+
+  goList() {
+    history.pushState({ view: 'list' }, '', 'index.html');
+    this._applyView('list', {}, true);
+  },
+
+  _applyView(view, data, scroll) {
+    const listEl = document.getElementById('listView');
+    const postEl = document.getElementById('postView');
+
+    if (view === 'post') {
+      listEl?.classList.add('view-hidden');
+      postEl?.classList.remove('view-hidden');
+      App.emit('router:post', { file: data.file });
+      if (scroll) window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      postEl?.classList.add('view-hidden');
+      listEl?.classList.remove('view-hidden');
+      App.emit('router:list', {});
+      if (scroll) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: this._savedScrollY, behavior: 'instant' });
+        });
+      }
+    }
+  },
+};
+
+export default Router;
+```
+
+---
+
 ## 왜 이런 방식이 필요할까?
 
 보통 블로그는 글을 클릭하면 새 페이지로 이동합니다.  

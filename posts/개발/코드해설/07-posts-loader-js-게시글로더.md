@@ -11,6 +11,52 @@ excerpt: 블로그가 처음 열릴 때 게시글 목록을 어떻게 가져오�
 블로그를 열면 게시글 카드들이 나타납니다.  
 이 카드들의 데이터(제목, 날짜, 카테고리 등)는 `posts/posts.json` 파일에 있어요.
 
+---
+
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import App from '../core/app.js';
+
+let _cache = null;
+
+const PostsLoader = {
+  async load() {
+    if (_cache) {
+      App.emit('posts:loaded', { posts: _cache });
+      return _cache;
+    }
+
+    try {
+      const res = await fetch('posts/posts.json');
+      if (!res.ok) throw new Error(`posts.json 불러오기 실패: HTTP ${res.status}`);
+
+      const posts = await res.json();
+      posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      _cache = posts;
+      App.emit('posts:loaded', { posts });
+      return posts;
+
+    } catch (error) {
+      console.error('[PostsLoader]', error);
+      App.emit('posts:error', { error });
+      throw error;
+    }
+  },
+
+  clearCache() {
+    _cache = null;
+  },
+};
+
+export default PostsLoader;
+```
+
+---
+
 `posts-loader.js`는 이 파일을 가져와서 다른 모듈에 전달합니다.
 
 ---

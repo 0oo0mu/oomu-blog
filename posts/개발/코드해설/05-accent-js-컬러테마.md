@@ -13,6 +13,110 @@ excerpt: 포인트 컬러를 바꾸면 버튼, 링크, 사이드바가 한꺼번
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import Storage from './storage.js';
+
+const STORAGE_KEY = 'accent_preset';
+
+const PRESETS = [
+  { name: '인디고', accent: '#6366f1', light: 'rgba(99,102,241,0.13)'  },
+  { name: '블루',   accent: '#3b82f6', light: 'rgba(59,130,246,0.13)'  },
+  { name: '에메랄드', accent: '#10b981', light: 'rgba(16,185,129,0.13)' },
+  { name: '티얼',   accent: '#06b6d4', light: 'rgba(6,182,212,0.13)'   },
+  { name: '보라',   accent: '#8b5cf6', light: 'rgba(139,92,246,0.13)'  },
+  { name: '핑크',   accent: '#ec4899', light: 'rgba(236,72,153,0.13)'  },
+  { name: '로즈',   accent: '#f43f5e', light: 'rgba(244,63,94,0.13)'   },
+  { name: '오렌지', accent: '#f97316', light: 'rgba(249,115,22,0.13)'  },
+];
+
+const Accent = {
+  _current: 0,
+
+  init() {
+    this._current = Storage.get(STORAGE_KEY, 0);
+    if (this._current < 0 || this._current >= PRESETS.length) {
+      this._current = 0;
+    }
+    this._apply(this._current);
+    this._buildPopup();
+    this._bindEvents();
+  },
+
+  _apply(index) {
+    const preset = PRESETS[index];
+    if (!preset) return;
+    const root = document.documentElement;
+    root.style.setProperty('--accent',       preset.accent);
+    root.style.setProperty('--accent-light', preset.light);
+    document.querySelectorAll('.color-dot').forEach(dot => {
+      dot.style.background = preset.accent;
+    });
+  },
+
+  _buildPopup() {
+    const popup = document.getElementById('colorPresetPopup');
+    if (!popup) return;
+    popup.innerHTML = PRESETS.map((p, i) => `
+      <button
+        class="preset-swatch ${i === this._current ? 'active' : ''}"
+        data-index="${i}"
+        title="${p.name}"
+        style="background: ${p.accent};"
+      ></button>
+    `).join('');
+  },
+
+  _bindEvents() {
+    const btn   = document.getElementById('colorPresetBtn');
+    const popup = document.getElementById('colorPresetPopup');
+    const wrap  = document.getElementById('colorPresetWrap');
+    if (!btn || !popup || !wrap) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = popup.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen);
+    });
+
+    popup.addEventListener('click', (e) => {
+      const swatch = e.target.closest('.preset-swatch');
+      if (!swatch) return;
+      const index = parseInt(swatch.dataset.index, 10);
+      this._current = index;
+      this._apply(index);
+      Storage.set(STORAGE_KEY, index);
+      popup.querySelectorAll('.preset-swatch').forEach((s, i) => {
+        s.classList.toggle('active', i === index);
+      });
+      popup.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) {
+        popup.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  },
+
+  current() {
+    return PRESETS[this._current];
+  },
+};
+
+export { PRESETS };
+export default Accent;
+```
+
+---
+
+---
+
 ## 핵심 원리: CSS 변수 교체
 
 ```css

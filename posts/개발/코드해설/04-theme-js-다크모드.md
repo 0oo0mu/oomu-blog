@@ -13,6 +13,61 @@ excerpt: 버튼 하나로 전체 색상이 바뀌는 마법. classList.toggle과
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import Storage from './storage.js';
+import App from './app.js';
+
+const STORAGE_KEY = 'theme';
+
+const Theme = {
+  init() {
+    const saved = Storage.get(STORAGE_KEY, 'light');
+    this._apply(saved);
+
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.addEventListener('click', () => this.toggle());
+  },
+
+  toggle() {
+    const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    this._apply(next);
+    Storage.set(STORAGE_KEY, next);
+    App.emit('theme:change', { theme: next });
+  },
+
+  current() {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  },
+
+  _apply(theme) {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      this._setButton('☀️', '라이트');
+    } else {
+      document.documentElement.classList.remove('dark');
+      this._setButton('🌙', '다크');
+    }
+  },
+
+  _setButton(icon, label) {
+    const iconEl  = document.getElementById('themeIcon');
+    const labelEl = document.getElementById('themeLabel');
+    if (iconEl)  iconEl.textContent  = icon;
+    if (labelEl) labelEl.textContent = label;
+  },
+};
+
+export default Theme;
+```
+
+---
+
+---
+
 ## 핵심 원리: HTML에 클래스 붙이기
 
 ```html

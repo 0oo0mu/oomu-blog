@@ -26,6 +26,423 @@ excerpt: 하단 고정 뮤직 플레이어의 동작 원리. HTMLAudioElement, �
 
 ---
 
+## 전체 코드
+
+먼저 전체 코드를 눈으로 훑어보세요. 아래에서 한 부분씩 잘라 설명합니다.
+
+```javascript
+import Storage from '../core/storage.js';
+
+const SK = {
+  INDEX:    'mp_index',
+  TIME:     'mp_time',
+  VOLUME:   'mp_volume',
+  SHUFFLE:  'mp_shuffle',
+  REPEAT:   'mp_repeat',
+};
+
+const MusicPlayer = {
+  audio:        null,
+  playlist:     [],
+  currentIndex: 0,
+  isPlaying:    false,
+  isShuffled:   false,
+  repeatMode:   'none',
+  shuffleOrder: [],
+  el: {},
+
+  async init() {
+    try {
+      const res = await fetch('music/playlist.json');
+      if (!res.ok) throw new Error('playlist.json not found');
+      this.playlist = await res.json();
+    } catch {
+      this.playlist = [];
+    }
+
+    this._buildDOM();
+    this._bindEvents();
+    this._restoreState();
+    this._renderPlaylist();
+    this._updateTrackInfo();
+    this._updateControls();
+
+    window.addEventListener('beforeunload', () => this._saveState());
+  },
+
+  _buildDOM() {
+    const div = document.createElement('div');
+    div.id = 'musicPlayer';
+    div.className = 'music-player';
+    div.innerHTML = `
+      <div class="playlist-panel" id="playlistPanel">
+        <div class="playlist-header">
+          <span>재생목록 <span id="playlistCount"></span></span>
+          <button id="playlistCloseBtn" title="닫기">✕</button>
+        </div>
+        <ul class="playlist-items" id="playlistItems"></ul>
+      </div>
+      <div class="player-bar">
+        <div class="player-track">
+          <div class="track-cover" id="trackCover">♫</div>
+          <div class="track-info">
+            <div class="track-title"  id="trackTitle">재생목록을 추가하세요</div>
+            <div class="track-artist" id="trackArtist">music/playlist.json</div>
+          </div>
+        </div>
+        <div class="player-center">
+          <div class="player-controls">
+            <button class="ctrl-btn" id="mpPrevBtn"  title="이전 곡">⏮</button>
+            <button class="ctrl-btn play-btn" id="mpPlayBtn" title="재생/일시정지">▶</button>
+            <button class="ctrl-btn" id="mpNextBtn"  title="다음 곡">⏭</button>
+          </div>
+          <div class="player-progress">
+            <span class="time" id="mpCurrentTime">0:00</span>
+            <input type="range" class="progress-slider" id="mpProgress" min="0" value="0" step="0.1" />
+            <span class="time" id="mpDuration">0:00</span>
+          </div>
+        </div>
+        <div class="player-extra">
+          <button class="ctrl-btn" id="mpShuffleBtn" title="셔플">🔀</button>
+          <button class="ctrl-btn" id="mpRepeatBtn"  title="반복">🔁</button>
+          <div class="volume-wrap">
+            <button class="ctrl-btn" id="mpMuteBtn" title="음소거">🔊</button>
+            <input type="range" class="volume-slider" id="mpVolume" min="0" max="100" value="70" />
+          </div>
+          <button class="ctrl-btn" id="mpListBtn" title="재생목록">☰</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(div);
+    document.body.classList.add('has-player');
+
+    this.el = {
+      panel:       document.getElementById('playlistPanel'),
+      items:       document.getElementById('playlistItems'),
+      count:       document.getElementById('playlistCount'),
+      cover:       document.getElementById('trackCover'),
+      title:       document.getElementById('trackTitle'),
+      artist:      document.getElementById('trackArtist'),
+      playBtn:     document.getElementById('mpPlayBtn'),
+      prevBtn:     document.getElementById('mpPrevBtn'),
+      nextBtn:     document.getElementById('mpNextBtn'),
+      progress:    document.getElementById('mpProgress'),
+      currentTime: document.getElementById('mpCurrentTime'),
+      duration:    document.getElementById('mpDuration'),
+      shuffleBtn:  document.getElementById('mpShuffleBtn'),
+      repeatBtn:   document.getElementById('mpRepeatBtn'),
+      muteBtn:     document.getElementById('mpMuteBtn'),
+      volume:      document.getElementById('mpVolume'),
+      listBtn:     document.getElementById('mpListBtn'),
+      closeBtn:    document.getElementById('playlistCloseBtn'),
+    };
+
+    this.audio = new Audio();
+    this.audio.preload = 'metadata';
+  },
+
+  _bindEvents() {
+    const { el, audio } = this;
+
+    el.playBtn.addEventListener('click', () => this._togglePlay());
+    el.prevBtn.addEventListener('click', () => this._prev());
+    el.nextBtn.addEventListener('click', () => this._next());
+
+    let seeking = false;
+    el.progress.addEventListener('mousedown',  () => { seeking = true; });
+    el.progress.addEventListener('touchstart', () => { seeking = true; });
+    el.progress.addEventListener('change', () => {
+      audio.currentTime = parseFloat(el.progress.value);
+      seeking = false;
+    });
+    el.progress.addEventListener('input', () => {
+      this._updateSliderFill(el.progress);
+      el.currentTime.textContent = formatTime(parseFloat(el.progress.value));
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      if (!seeking && !isNaN(audio.duration)) {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        el.progress.value = audio.currentTime;
+        el.currentTime.textContent = formatTime(audio.currentTime);
+        this._updateSliderFill(el.progress, pct);
+      }
+    });
+
+    audio.addEventListener('loadedmetadata', () => {
+      el.progress.max = audio.duration;
+      el.duration.textContent = formatTime(audio.duration);
+      const savedTime = Storage.get(SK.TIME, 0);
+      if (savedTime > 0) {
+        audio.currentTime = savedTime;
+        Storage.remove(SK.TIME);
+      }
+    });
+
+    audio.addEventListener('ended', () => this._onEnded());
+
+    el.volume.addEventListener('input', () => {
+      const vol = parseInt(el.volume.value) / 100;
+      audio.volume = vol;
+      Storage.set(SK.VOLUME, vol);
+      this._updateSliderFill(el.volume);
+      el.muteBtn.textContent = vol === 0 ? '🔇' : '🔊';
+    });
+
+    el.muteBtn.addEventListener('click', () => {
+      if (audio.volume > 0) {
+        this._prevVolume = audio.volume;
+        audio.volume = 0;
+        el.volume.value = 0;
+        el.muteBtn.textContent = '🔇';
+      } else {
+        const restore = this._prevVolume || 0.7;
+        audio.volume = restore;
+        el.volume.value = restore * 100;
+        el.muteBtn.textContent = '🔊';
+      }
+      this._updateSliderFill(el.volume);
+    });
+
+    el.shuffleBtn.addEventListener('click', () => {
+      this.isShuffled = !this.isShuffled;
+      if (this.isShuffled) this._buildShuffleOrder();
+      el.shuffleBtn.classList.toggle('on', this.isShuffled);
+      Storage.set(SK.SHUFFLE, this.isShuffled);
+    });
+
+    el.repeatBtn.addEventListener('click', () => {
+      const modes = ['none', 'one', 'all'];
+      const next  = modes[(modes.indexOf(this.repeatMode) + 1) % modes.length];
+      this.repeatMode = next;
+      Storage.set(SK.REPEAT, next);
+      this._updateRepeatBtn();
+    });
+
+    el.listBtn.addEventListener('click', () => {
+      el.panel.classList.toggle('open');
+    });
+    el.closeBtn.addEventListener('click', () => {
+      el.panel.classList.remove('open');
+    });
+  },
+
+  _togglePlay() {
+    if (this.playlist.length === 0) return;
+    if (this.isPlaying) {
+      this.audio.pause();
+      this.isPlaying = false;
+    } else {
+      if (!this.audio.src || this.audio.src === window.location.href) {
+        this._loadTrack(this.currentIndex, false);
+      }
+      this.audio.play().catch(err => console.warn('[MusicPlayer] 재생 실패:', err));
+      this.isPlaying = true;
+    }
+    this._updatePlayBtn();
+  },
+
+  _loadTrack(index, autoPlay = true) {
+    if (this.playlist.length === 0) return;
+    this.currentIndex = ((index % this.playlist.length) + this.playlist.length) % this.playlist.length;
+    const track = this.playlist[this.currentIndex];
+    const rawSrc = track.file || track.src || '';
+    this.audio.src = rawSrc;
+    this.audio.load();
+    Storage.set(SK.INDEX, this.currentIndex);
+    this._updateTrackInfo();
+    this._updatePlaylistHighlight();
+    this._resetProgress();
+    if (autoPlay) {
+      this.audio.play()
+        .then(() => { this.isPlaying = true; this._updatePlayBtn(); })
+        .catch(err => console.warn('[MusicPlayer] 재생 실패:', err));
+    }
+  },
+
+  _prev() {
+    if (this.playlist.length === 0) return;
+    if (this.audio.currentTime > 3) {
+      this.audio.currentTime = 0;
+      return;
+    }
+    this._loadTrack(this._getPrevIndex(), this.isPlaying);
+  },
+
+  _next() {
+    if (this.playlist.length === 0) return;
+    this._loadTrack(this._getNextIndex(), this.isPlaying);
+  },
+
+  _onEnded() {
+    switch (this.repeatMode) {
+      case 'one':
+        this.audio.currentTime = 0;
+        this.audio.play();
+        break;
+      case 'all':
+        this._loadTrack(this._getNextIndex(), true);
+        break;
+      default:
+        const nextIdx = this._getNextIndex();
+        if (nextIdx === 0 && !this.isShuffled) {
+          this.isPlaying = false;
+          this._updatePlayBtn();
+          this._resetProgress();
+        } else {
+          this._loadTrack(nextIdx, true);
+        }
+    }
+  },
+
+  _buildShuffleOrder() {
+    const arr = Array.from({ length: this.playlist.length }, (_, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    const curPos = arr.indexOf(this.currentIndex);
+    if (curPos !== 0) [arr[0], arr[curPos]] = [arr[curPos], arr[0]];
+    this.shuffleOrder = arr;
+  },
+
+  _getNextIndex() {
+    if (this.isShuffled) {
+      const pos = this.shuffleOrder.indexOf(this.currentIndex);
+      return this.shuffleOrder[(pos + 1) % this.shuffleOrder.length];
+    }
+    return (this.currentIndex + 1) % this.playlist.length;
+  },
+
+  _getPrevIndex() {
+    if (this.isShuffled) {
+      const pos = this.shuffleOrder.indexOf(this.currentIndex);
+      return this.shuffleOrder[(pos - 1 + this.shuffleOrder.length) % this.shuffleOrder.length];
+    }
+    return (this.currentIndex - 1 + this.playlist.length) % this.playlist.length;
+  },
+
+  _updateTrackInfo() {
+    const track = this.playlist[this.currentIndex];
+    if (!track) return;
+    this.el.title.textContent  = track.title  || '제목 없음';
+    this.el.artist.textContent = track.artist || '';
+    if (track.cover) {
+      this.el.cover.innerHTML = `<img src="${track.cover}" alt="${track.title}" />`;
+    } else {
+      this.el.cover.textContent = '♫';
+    }
+  },
+
+  _updatePlayBtn() {
+    this.el.playBtn.textContent = this.isPlaying ? '⏸' : '▶';
+  },
+
+  _updateRepeatBtn() {
+    const { repeatBtn } = this.el;
+    const icons = { none: '🔁', one: '🔂', all: '🔁' };
+    repeatBtn.textContent = icons[this.repeatMode];
+    repeatBtn.classList.toggle('on', this.repeatMode !== 'none');
+    repeatBtn.title = { none: '반복 없음', one: '한 곡 반복', all: '전체 반복' }[this.repeatMode];
+  },
+
+  _updateControls() {
+    this._updatePlayBtn();
+    this._updateRepeatBtn();
+    this.el.shuffleBtn.classList.toggle('on', this.isShuffled);
+    const vol = this.audio.volume;
+    this.el.volume.value = vol * 100;
+    this._updateSliderFill(this.el.volume);
+    this.el.muteBtn.textContent = vol === 0 ? '🔇' : '🔊';
+  },
+
+  _renderPlaylist() {
+    const { items, count } = this.el;
+    count.textContent = `(${this.playlist.length})`;
+
+    if (this.playlist.length === 0) {
+      items.innerHTML = `<li class="playlist-empty">music/playlist.json에 곡을 추가하세요.</li>`;
+      return;
+    }
+
+    items.innerHTML = this.playlist.map((track, idx) => `
+      <li class="playlist-item ${idx === this.currentIndex ? 'active' : ''}"
+          data-index="${idx}">
+        <span class="playlist-num">${idx + 1}</span>
+        <div class="playlist-track-info">
+          <div class="playlist-track-title">${track.title || '제목 없음'}</div>
+          <div class="playlist-track-artist">${track.artist || ''}</div>
+        </div>
+      </li>
+    `).join('');
+
+    items.addEventListener('click', (e) => {
+      const li = e.target.closest('.playlist-item');
+      if (!li) return;
+      const idx = parseInt(li.dataset.index);
+      this._loadTrack(idx, true);
+      this.isPlaying = true;
+      this._updatePlayBtn();
+    });
+  },
+
+  _updatePlaylistHighlight() {
+    this.el.items.querySelectorAll('.playlist-item').forEach((li, idx) => {
+      li.classList.toggle('active', idx === this.currentIndex);
+    });
+  },
+
+  _resetProgress() {
+    this.el.progress.value = 0;
+    this.el.currentTime.textContent = '0:00';
+    this.el.duration.textContent = '0:00';
+    this._updateSliderFill(this.el.progress, 0);
+  },
+
+  _updateSliderFill(slider, pct) {
+    const value = pct ?? ((parseFloat(slider.value) / parseFloat(slider.max || 100)) * 100);
+    slider.style.setProperty('--pct', `${Math.max(0, Math.min(100, value))}%`);
+  },
+
+  _saveState() {
+    Storage.set(SK.INDEX,   this.currentIndex);
+    Storage.set(SK.TIME,    this.audio.currentTime);
+    Storage.set(SK.VOLUME,  this.audio.volume);
+    Storage.set(SK.SHUFFLE, this.isShuffled);
+    Storage.set(SK.REPEAT,  this.repeatMode);
+  },
+
+  _restoreState() {
+    const savedIndex  = Storage.get(SK.INDEX,   0);
+    const savedVolume = Storage.get(SK.VOLUME,  0.7);
+    const savedShuffle= Storage.get(SK.SHUFFLE, false);
+    const savedRepeat = Storage.get(SK.REPEAT,  'none');
+
+    this.repeatMode = savedRepeat;
+    this.isShuffled = savedShuffle;
+    this.audio.volume = savedVolume;
+
+    if (this.playlist.length > 0) {
+      const idx = Math.min(savedIndex, this.playlist.length - 1);
+      this._loadTrack(idx, false);
+    }
+
+    if (this.isShuffled) this._buildShuffleOrder();
+  },
+};
+
+function formatTime(sec) {
+  if (isNaN(sec) || !isFinite(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export default MusicPlayer;
+```
+
+---
+
 ## 초기화 순서
 
 ```javascript
