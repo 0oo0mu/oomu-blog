@@ -1,168 +1,95 @@
 ---
 title: "[코드 해설 05] accent.js — 8가지 컬러 프리셋"
-date: 2026-06-02
+date: 2026-06-08
 category: 개발/코드해설
-tags: [JavaScript, CSS변수, 테마]
-excerpt: 인디고, 블루, 에메랄드... 8가지 색상 프리셋을 CSS 변수 교체로 구현하는 방법을 한 줄씩 설명합니다.
+tags: [JavaScript, CSS변수, 디자인]
+excerpt: 포인트 컬러를 바꾸면 버튼, 링크, 사이드바가 한꺼번에 바뀝니다. CSS 변수와 data-index 속성으로 구현하는 색상 테마 시스템.
 ---
-
-# accent.js — 8가지 컬러 프리셋
 
 ## 이 파일이 하는 일
 
-헤더 오른쪽 색상 점을 클릭하면 블로그 포인트 컬러가 바뀝니다.
-인디고, 블루, 에메랄드, 티얼, 보라, 핑크, 로즈, 오렌지 — 8가지 프리셋입니다.
+헤더의 색상 점(●)을 클릭하면 팝업이 열리고, 색상을 선택하면  
+버튼, 링크, 사이드바 활성 항목 등 **모든 포인트 컬러**가 한꺼번에 바뀝니다.
 
-theme.js와 원리가 같습니다. CSS 변수(`--accent`, `--accent-light`)를 교체합니다.
+---
+
+## 핵심 원리: CSS 변수 교체
+
+```css
+/* CSS에서 --accent 변수를 사용 */
+.sort-btn.active {
+  background: var(--accent);
+}
+
+a {
+  color: var(--accent);
+}
+```
+
+JavaScript가 `--accent` 변수의 값만 바꾸면 이 변수를 쓰는 모든 요소가 자동으로 바뀌어요.
 
 ---
 
 ## 프리셋 목록
 
-```js
+```javascript
 const PRESETS = [
-  { name: '인디고',   accent: '#6366f1', light: 'rgba(99,102,241,0.13)'  },
-  { name: '블루',     accent: '#3b82f6', light: 'rgba(59,130,246,0.13)'  },
-  { name: '에메랄드', accent: '#10b981', light: 'rgba(16,185,129,0.13)'  },
-  { name: '티얼',     accent: '#06b6d4', light: 'rgba(6,182,212,0.13)'   },
-  { name: '보라',     accent: '#8b5cf6', light: 'rgba(139,92,246,0.13)'  },
-  { name: '핑크',     accent: '#ec4899', light: 'rgba(236,72,153,0.13)'  },
-  { name: '로즈',     accent: '#f43f5e', light: 'rgba(244,63,94,0.13)'   },
-  { name: '오렌지',   accent: '#f97316', light: 'rgba(249,115,22,0.13)'  },
+  { name: '인디고', accent: '#6366f1', light: 'rgba(99,102,241,0.13)'  },
+  { name: '블루',   accent: '#3b82f6', light: 'rgba(59,130,246,0.13)'  },
+  { name: '에메랄드', accent: '#10b981', light: 'rgba(16,185,129,0.13)' },
+  { name: '티얼',   accent: '#06b6d4', light: 'rgba(6,182,212,0.13)'   },
+  { name: '보라',   accent: '#8b5cf6', light: 'rgba(139,92,246,0.13)'  },
+  { name: '핑크',   accent: '#ec4899', light: 'rgba(236,72,153,0.13)'  },
+  { name: '로즈',   accent: '#f43f5e', light: 'rgba(244,63,94,0.13)'   },
+  { name: '오렌지', accent: '#f97316', light: 'rgba(249,115,22,0.13)'  },
 ];
 ```
 
-각 프리셋은 두 가지 색을 가집니다.
-- `accent`: 버튼, 링크, 강조에 쓰이는 진한 색
-- `light`: 배경, 호버에 쓰이는 연한 색 (`rgba`의 마지막 숫자 `0.13`이 투명도 13%)
+각 프리셋은 두 가지 색상을 가집니다:
+- `accent`: 버튼, 링크 등 **강조 색상**
+- `light`: 배경, 호버 등 **연한 배경 색상** (`rgba`의 마지막 숫자 `0.13`이 투명도)
 
 ---
 
-## 전체 코드
+## _apply() — CSS 변수 적용
 
-```js
-import Storage from './storage.js';
-
-const STORAGE_KEY = 'accent_preset';
-
-const Accent = {
-  _current: 0,
-
-  init() {
-    this._current = Storage.get(STORAGE_KEY, 0);
-    if (this._current < 0 || this._current >= PRESETS.length) {
-      this._current = 0;
-    }
-    this._apply(this._current);
-    this._buildPopup();
-    this._bindEvents();
-  },
-
-  _apply(index) {
-    const preset = PRESETS[index];
-    if (!preset) return;
-    const root = document.documentElement;
-    root.style.setProperty('--accent',       preset.accent);
-    root.style.setProperty('--accent-light', preset.light);
-    document.querySelectorAll('.color-dot').forEach(dot => {
-      dot.style.background = preset.accent;
-    });
-  },
-
-  _buildPopup() {
-    const popup = document.getElementById('colorPresetPopup');
-    if (!popup) return;
-    popup.innerHTML = PRESETS.map((p, i) => `
-      <button
-        class="preset-swatch ${i === this._current ? 'active' : ''}"
-        data-index="${i}"
-        title="${p.name}"
-        style="background: ${p.accent};">
-      </button>
-    `).join('');
-  },
-
-  _bindEvents() {
-    const btn   = document.getElementById('colorPresetBtn');
-    const popup = document.getElementById('colorPresetPopup');
-    const wrap  = document.getElementById('colorPresetWrap');
-    if (!btn || !popup || !wrap) return;
-
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = popup.classList.toggle('open');
-      btn.setAttribute('aria-expanded', isOpen);
-    });
-
-    popup.addEventListener('click', (e) => {
-      const swatch = e.target.closest('.preset-swatch');
-      if (!swatch) return;
-      const index = parseInt(swatch.dataset.index, 10);
-      this._current = index;
-      this._apply(index);
-      Storage.set(STORAGE_KEY, index);
-      popup.querySelectorAll('.preset-swatch').forEach((s, i) => {
-        s.classList.toggle('active', i === index);
-      });
-      popup.classList.remove('open');
-      btn.setAttribute('aria-expanded', 'false');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!wrap.contains(e.target)) {
-        popup.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-      }
-    });
-  },
-};
-
-export { PRESETS };
-export default Accent;
-```
-
----
-
-## 한 줄씩 설명
-
-### `_apply` — CSS 변수 교체
-
-```js
+```javascript
 _apply(index) {
   const preset = PRESETS[index];
   if (!preset) return;
-```
 
-`PRESETS[index]`로 해당 프리셋 객체를 가져옵니다.
-`if (!preset) return`은 "없으면 여기서 함수 종료"입니다. 이상한 인덱스에서 오류를 방지합니다.
-
-```js
   const root = document.documentElement;
   root.style.setProperty('--accent',       preset.accent);
   root.style.setProperty('--accent-light', preset.light);
-```
 
-`document.documentElement`는 `<html>` 태그입니다.
-`style.setProperty('변수명', '값')`으로 CSS 변수를 직접 교체합니다.
-
-예: `root.style.setProperty('--accent', '#3b82f6')`
-→ CSS에서 `var(--accent)`를 쓰는 모든 곳이 즉시 `#3b82f6`(블루)으로 바뀝니다.
-
-```js
   document.querySelectorAll('.color-dot').forEach(dot => {
     dot.style.background = preset.accent;
   });
+},
 ```
 
-헤더에 있는 색상 점 버튼도 선택된 색으로 업데이트합니다.
-`querySelectorAll`은 조건에 맞는 요소를 **모두** 찾습니다 (getElementById는 하나만).
-`forEach`로 찾은 모든 점의 배경색을 바꿉니다.
+**한 줄씩 설명:**
+
+`PRESETS[index]`  
+→ 배열에서 인덱스로 프리셋을 가져옵니다.  
+`PRESETS[0]`은 인디고, `PRESETS[1]`은 블루예요.
+
+`if (!preset) return`  
+→ 인덱스가 범위를 벗어나면 그냥 종료합니다. 방어 코드예요.
+
+`document.documentElement.style.setProperty('--accent', preset.accent)`  
+→ `<html>` 태그의 인라인 스타일로 CSS 변수를 설정합니다.  
+인라인 스타일은 CSS 파일보다 우선순위가 높아서 기존 값을 덮어써요.
+
+`document.querySelectorAll('.color-dot')`  
+→ 페이지에 있는 모든 `.color-dot` 요소를 가져옵니다.  
+헤더의 작은 색상 점들이에요. 선택한 색상으로 즉시 업데이트됩니다.
 
 ---
 
-### `_buildPopup` — 팝업 버튼 생성
+## _buildPopup() — 팝업 생성
 
-```js
+```javascript
 _buildPopup() {
   const popup = document.getElementById('colorPresetPopup');
   if (!popup) return;
@@ -172,111 +99,89 @@ _buildPopup() {
       class="preset-swatch ${i === this._current ? 'active' : ''}"
       data-index="${i}"
       title="${p.name}"
-      style="background: ${p.accent};">
-    </button>
+      style="background: ${p.accent};"
+    ></button>
   `).join('');
 },
 ```
 
-**`PRESETS.map((p, i) => ...)`**
-`map`은 배열의 각 항목을 변환합니다. `p`는 각 프리셋 객체, `i`는 인덱스(0~7)입니다.
-각 프리셋마다 `<button>` HTML 문자열을 만듭니다.
+**한 줄씩 설명:**
 
-**`i === this._current ? 'active' : ''`**
-삼항연산자. 현재 선택된 프리셋이면 `active` 클래스 추가, 아니면 빈 문자열.
+`PRESETS.map((p, i) => ...)`  
+→ 프리셋 배열을 HTML 문자열 배열로 변환합니다.  
+`map`은 "배열의 각 항목을 다른 형태로 변환해라"는 메서드예요.
 
-**`data-index="${i}"`**
-HTML 커스텀 속성. 나중에 클릭할 때 몇 번 프리셋인지 알기 위해 심어둡니다.
-JavaScript에서는 `element.dataset.index`로 꺼낼 수 있습니다.
+`i === this._current ? 'active' : ''`  
+→ 현재 선택된 프리셋이면 `active` 클래스를 추가합니다.  
+CSS에서 `active` 클래스에 선택 표시(테두리 등)를 스타일링해요.
 
-**`.join('')`**
-`map`이 만든 문자열 배열을 하나의 문자열로 합칩니다.
-`['<button>...</button>', '<button>...</button>']` → `'<button>...</button><button>...</button>'`
+`data-index="${i}"`  
+→ 버튼에 인덱스를 저장합니다.  
+클릭했을 때 "몇 번 프리셋을 선택했는가"를 알기 위해서예요.
 
----
-
-### `_bindEvents` — 이벤트 연결
-
-#### 팝업 열기/닫기
-
-```js
-btn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const isOpen = popup.classList.toggle('open');
-  btn.setAttribute('aria-expanded', isOpen);
-});
-```
-
-**`e.stopPropagation()`**
-클릭 이벤트가 부모 요소로 전파되는 것을 막습니다.
-막지 않으면 버튼 클릭 이벤트가 document 클릭 이벤트도 발동시켜서, 팝업을 열자마자 닫혀버립니다.
-
-**`popup.classList.toggle('open')`**
-`open` 클래스가 없으면 추가, 있으면 제거. 반환값은 추가했으면 true, 제거했으면 false.
-
-**`btn.setAttribute('aria-expanded', isOpen)`**
-접근성(스크린리더) 속성입니다. 팝업이 열려있으면 `aria-expanded="true"`.
+`.join('')`  
+→ 배열을 하나의 문자열로 합칩니다.  
+`['<button>A</button>', '<button>B</button>'].join('')` → `'<button>A</button><button>B</button>'`
 
 ---
 
-#### 색상 선택
+## _bindEvents() — 이벤트 연결
 
-```js
+```javascript
 popup.addEventListener('click', (e) => {
   const swatch = e.target.closest('.preset-swatch');
   if (!swatch) return;
 
   const index = parseInt(swatch.dataset.index, 10);
-```
-
-팝업 전체에 클릭 이벤트를 달아서(이벤트 위임), 각 스와치 버튼에 일일이 달지 않습니다.
-클릭된 게 `.preset-swatch`가 아니면 무시합니다.
-
-`swatch.dataset.index`는 문자열 `'3'` 같은 형태입니다.
-`parseInt('3', 10)`으로 숫자 `3`으로 변환합니다. `10`은 10진수라는 뜻입니다.
-
-```js
   this._current = index;
   this._apply(index);
   Storage.set(STORAGE_KEY, index);
-```
 
-선택된 프리셋을 적용하고, localStorage에 저장합니다.
-
-```js
   popup.querySelectorAll('.preset-swatch').forEach((s, i) => {
     s.classList.toggle('active', i === index);
   });
+
+  popup.classList.remove('open');
+});
 ```
 
-`classList.toggle(클래스, 조건)` — 두 번째 인자가 true면 추가, false면 제거.
-선택된 스와치에만 `active` 클래스, 나머지는 제거합니다.
+`parseInt(swatch.dataset.index, 10)`  
+→ `data-index` 속성 값은 문자열이에요. 숫자로 변환합니다.  
+두 번째 인자 `10`은 10진수 변환을 의미해요 (보통 생략하지만 명시적으로 씀).
+
+`classList.toggle('active', i === index)`  
+→ 두 번째 인자가 `true`이면 추가, `false`이면 제거합니다.  
+선택된 스와치에만 `active` 클래스가 붙도록 업데이트해요.
 
 ---
 
-#### 바깥 클릭으로 팝업 닫기
+## 팝업 바깥 클릭 닫기
 
-```js
+```javascript
 document.addEventListener('click', (e) => {
   if (!wrap.contains(e.target)) {
     popup.classList.remove('open');
-    btn.setAttribute('aria-expanded', 'false');
   }
 });
 ```
 
-`wrap.contains(e.target)` — 클릭된 요소가 `wrap` 안에 있냐?
-아니면(팝업 바깥 클릭) → 팝업 닫기.
+`wrap.contains(e.target)`  
+→ 클릭한 요소가 `wrap` 안에 있는지 확인합니다.  
+팝업 안을 클릭하면 `true`, 바깥을 클릭하면 `false`예요.  
+바깥을 클릭했을 때만 팝업을 닫습니다.
 
 ---
 
-### `export { PRESETS }; export default Accent;`
+## 정리
 
-`export default`는 기본 내보내기(import 시 이름 자유롭게 설정).
-`export { PRESETS }`는 추가 내보내기. 빌드 스크립트에서 프리셋 목록이 필요할 때 씁니다.
+색상을 바꿀 때 일어나는 일:
 
----
-
-## 다음 파일
-
-- **[06] env.js** — 로컬 개발 환경과 배포 환경 구분하기
+```
+스와치 클릭
+  → data-index 읽기
+  → PRESETS[index] 가져오기
+  → <html> CSS 변수 교체 (--accent, --accent-light)
+  → CSS 변수를 쓰는 모든 요소 자동 업데이트
+  → Storage에 인덱스 저장
+  → 팝업 닫기
+```

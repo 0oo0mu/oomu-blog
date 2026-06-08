@@ -1,52 +1,61 @@
 ---
-title: "[코드 해설 15] build.js — posts.json을 자동으로 만드는 빌드 스크립트"
-date: 2026-06-02
+title: "[코드 해설 15] build.js — 배포 전 빌드 스크립트"
+date: 2026-06-08
 category: 개발/코드해설
 tags: [Node.js, 빌드, 자동화]
-excerpt: 새 글을 쓴 후 node build.js를 실행하면 posts.json, sitemap.xml, config.js가 자동 생성됩니다. Node.js 파일 시스템 API와 재귀 탐색을 한 줄씩 설명합니다.
+excerpt: 글을 쓰고 deploy.bat을 실행하면 자동으로 포스트 목록, 사이트맵, 플레이리스트가 생성됩니다. Node.js 파일 시스템 API를 한 줄씩 설명합니다.
 ---
 
-# build.js — posts.json을 자동으로 만드는 빌드 스크립트
+## 이 파일이 하는 일
 
-## 왜 빌드 스크립트가 필요한가
+`deploy.bat`을 실행하면 `node build.js`가 먼저 실행됩니다.  
+이 스크립트가 하는 일:
 
-이 블로그는 순수 정적 파일(HTML/CSS/JS)로 만들어져 있습니다.
-새 글(`.md` 파일)을 추가해도 서버가 없어서 파일 목록을 자동으로 알 수 없습니다.
-
-해결책: **배포 전에 한 번** Node.js 스크립트를 실행해서
-`posts/posts.json`을 미리 만들어두면, 브라우저가 이 파일만 fetch하면 됩니다.
-
-```
-새 글 작성 (posts/개발/hello.md)
-         │
-         ▼
-node build.js 실행
-         │
-         ▼
-posts/posts.json 갱신 ← 브라우저가 이걸 fetch
-sitemap.xml 생성     ← 구글 검색 노출용
-robots.txt 생성      ← 검색엔진 크롤링 설정
-js/core/config.js 생성 ← 프론트엔드 설정
-```
+1. `posts/` 폴더의 모든 `.md` 파일 탐색
+2. 각 파일의 Front Matter(제목, 날짜 등) 파싱
+3. `posts/posts.json` 생성 → 블로그 목록 데이터
+4. `sitemap.xml` 생성 → 검색엔진 등록
+5. `robots.txt` 생성 → 검색엔진 크롤러 안내
+6. `js/core/config.js` 생성 → 사이트 설정
+7. `music/playlist.json` 생성 → 뮤직 플레이어 목록
 
 ---
 
-## 전체 코드 (주요 부분)
+## Node.js vs 브라우저 JavaScript
 
-```js
+이 파일은 브라우저가 아닌 **Node.js**에서 실행됩니다.  
+차이점:
+
+| | 브라우저 JavaScript | Node.js |
+|--|-------------------|---------|
+| 실행 환경 | 웹 브라우저 | 터미널(명령 프롬프트) |
+| 파일 접근 | ❌ 불가 | ✅ 가능 (fs 모듈) |
+| DOM | ✅ 있음 | ❌ 없음 |
+
+브라우저 JS는 보안상 파일에 직접 접근할 수 없어요.  
+Node.js는 서버나 로컬에서 실행되어 파일을 읽고 쓸 수 있습니다.
+
+---
+
+## 모듈 불러오기
+
+```javascript
 const fs   = require('fs');
 const path = require('path');
+```
 
-// 설정 읽기
-const configPath = path.join(__dirname, 'blog.config.json');
-const config = fs.existsSync(configPath)
-  ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-  : { siteName: 'My Blog', siteUrl: '', description: '', author: '' };
+Node.js의 내장 모듈입니다.
 
-const POSTS_DIR = path.join(__dirname, 'posts');
-const OUTPUT    = path.join(POSTS_DIR, 'posts.json');
+`fs` (File System) → 파일 읽기/쓰기/탐색  
+`path` → 파일 경로 조작 (Windows와 Mac/Linux 경로 차이 처리)
 
-// 마크다운 파일 탐색 (재귀)
+브라우저 JS의 `import`와 달리 Node.js는 `require()`를 씁니다.
+
+---
+
+## findMarkdownFiles() — 재귀 탐색
+
+```javascript
 function findMarkdownFiles(dir, baseDir = dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const files   = [];
@@ -54,215 +63,134 @@ function findMarkdownFiles(dir, baseDir = dir) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...findMarkdownFiles(fullPath, baseDir));
+      files.push(...findMarkdownFiles(fullPath, baseDir)); // 재귀!
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const rel = path.relative(baseDir, fullPath).replace(/\\/g, '/');
       files.push(rel);
     }
   }
+
   return files;
 }
+```
 
-// Front Matter 파싱
-function parseFrontMatter(raw) {
-  const meta  = {};
-  const match = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-  if (!match) return { meta, content: raw };
+**한 줄씩 설명:**
 
-  match[1].split('\n').forEach(line => {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) return;
-    const key = line.slice(0, colonIdx).trim();
-    const val = line.slice(colonIdx + 1).trim();
+`fs.readdirSync(dir, { withFileTypes: true })`  
+→ 폴더 안의 항목들을 읽습니다.  
+`withFileTypes: true` → 파일인지 폴더인지 알 수 있는 `Dirent` 객체로 반환해요.
 
-    if (key === 'tags') {
-      meta.tags = val.replace(/[\[\]]/g,'').split(',').map(t=>t.trim()).filter(Boolean);
-    } else {
-      meta[key] = val;
-    }
-  });
+`entry.isDirectory()` → 폴더면 재귀 호출  
+`entry.isFile() && entry.name.endsWith('.md')` → .md 파일만 수집
 
-  return { meta, content: match[2] };
+`files.push(...findMarkdownFiles(...))` → 재귀 결과를 펼쳐서 합칩니다.
+
+`path.relative(baseDir, fullPath)` → 기준 경로로부터 상대 경로 계산  
+`D:\Blog\posts\개발\hello.md` → `개발/hello.md`
+
+`.replace(/\\/g, '/')` → Windows의 `\`를 `/`로 통일  
+웹에서는 항상 `/`를 씁니다.
+
+---
+
+## generateExcerpt() — 요약 자동 생성
+
+```javascript
+function generateExcerpt(content, maxLen = 150) {
+  const plain = content
+    .replace(/^#+\s+/gm, '')              // ## 헤딩 기호 제거
+    .replace(/[*_`>~]/g, '')              // 강조, 코드, 인용 기호 제거
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [텍스트](링크) → 텍스트
+    .replace(/\n+/g, ' ')                 // 줄바꿈 → 공백
+    .trim();
+
+  return plain.length > maxLen ? plain.slice(0, maxLen) + '...' : plain;
 }
+```
 
-// 포스트 데이터 수집
+Front Matter에 `excerpt`가 없을 때 본문에서 자동으로 생성합니다.
+
+`/^#+\s+/gm` → `m` 플래그는 각 줄의 시작(`^`)을 처리합니다.  
+`## 제목` → (제거) → `제목`
+
+`/\[([^\]]+)\]\([^)]+\)/g` → 마크다운 링크 패턴  
+`[클릭하세요](https://example.com)` → `클릭하세요`  
+`([^\]]+)` = 대괄호 안 텍스트 → `$1`로 유지
+
+---
+
+## generatePlaylist() — 음악 목록 자동 생성
+
+```javascript
+function generatePlaylist() {
+  const musicDir  = path.join(__dirname, 'music');
+  const audioExts = ['.mp3', '.ogg', '.wav', '.flac', '.m4a'];
+
+  if (!fs.existsSync(musicDir)) return;
+
+  const files = fs.readdirSync(musicDir).filter(f =>
+    audioExts.includes(path.extname(f).toLowerCase())
+  );
+
+  const playlist = files.map(f => ({
+    title: path.basename(f, path.extname(f)), // 확장자 제외 파일명
+    file:  'music/' + f,
+  }));
+
+  fs.writeFileSync(playlistPath, JSON.stringify(playlist, null, 2), 'utf-8');
+},
+```
+
+`__dirname` → 이 파일(`build.js`)이 있는 폴더 절대 경로  
+`path.join(__dirname, 'music')` → `D:\Blog\music`
+
+`path.extname(f)` → 파일 확장자. `'hello.mp3'` → `'.mp3'`  
+`path.basename(f, path.extname(f))` → 확장자 제외 파일명. `'hello.mp3'` → `'hello'`
+
+`JSON.stringify(playlist, null, 2)` → 읽기 좋게 들여쓰기(2칸)로 저장  
+`null` = replacer 없음, `2` = 들여쓰기 공백 수
+
+---
+
+## 메인 실행부
+
+```javascript
+console.log(`\n🔨 빌드 시작 — ${config.siteName}\n`);
+
 const mdFiles = findMarkdownFiles(POSTS_DIR);
-const posts   = [];
+const posts = [];
 
 for (const relPath of mdFiles) {
-  const fullPath = path.join(POSTS_DIR, relPath);
-  const raw      = fs.readFileSync(fullPath, 'utf-8');
-  const { meta } = parseFrontMatter(raw);
-
-  if (!meta.title) continue;
-
-  const fileParts = relPath.replace(/\.md$/, '').split('/');
-  fileParts.pop();
-  const category = fileParts.join('/') || meta.category || '';
-
-  posts.push({
-    file:     relPath,
-    title:    meta.title    || '',
-    date:     meta.date     || '',
-    category: meta.category || category,
-    tags:     meta.tags     || [],
-    excerpt:  meta.excerpt  || '',
-  });
+  const raw = fs.readFileSync(fullPath, 'utf-8');
+  const { meta, content } = parseFrontMatter(raw);
+  posts.push({ file: relPath, title, date, category, tags, excerpt });
 }
 
-// 날짜 내림차순 정렬
 posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-// posts.json 저장
-fs.writeFileSync(OUTPUT, JSON.stringify(posts, null, 2), 'utf-8');
-console.log(`✅ posts.json 생성 완료 (${posts.length}개)`);
-```
-
----
-
-## 한 줄씩 설명
-
-### Node.js 모듈 불러오기
-
-```js
-const fs   = require('fs');
-const path = require('path');
-```
-
-`require`는 Node.js에서 모듈을 불러오는 방법입니다. (브라우저의 `import`와 다릅니다)
-
-**`fs`** (File System): 파일 읽기, 쓰기, 목록 조회 등 파일 관련 기능.
-**`path`**: 파일 경로를 다루는 도구. 운영체제마다 다른 경로 구분자(`\` vs `/`)를 처리해줍니다.
-
----
-
-### 설정 파일 읽기
-
-```js
-const configPath = path.join(__dirname, 'blog.config.json');
-```
-
-**`__dirname`**: 현재 파일(build.js)이 있는 폴더의 절대 경로.
-**`path.join`**: 경로를 안전하게 합칩니다. Windows(`\`)와 Mac/Linux(`/`)를 모두 처리합니다.
-
-```js
-const config = fs.existsSync(configPath)
-  ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-  : { siteName: 'My Blog', ... };
-```
-
-**`fs.existsSync(경로)`**: 파일이 존재하면 `true`, 없으면 `false`.
-**`fs.readFileSync(경로, 'utf-8')`**: 파일을 동기적으로 읽어서 문자열로 반환.
-`'utf-8'`은 인코딩 방식입니다. 한글을 올바르게 읽으려면 명시해야 합니다.
-
----
-
-### `findMarkdownFiles` — 폴더 재귀 탐색
-
-```js
-function findMarkdownFiles(dir, baseDir = dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files   = [];
-```
-
-**`fs.readdirSync(dir, { withFileTypes: true })`**
-폴더 안의 항목들을 읽습니다.
-`{ withFileTypes: true }`를 주면 파일인지 폴더인지 구분할 수 있는 `Dirent` 객체를 반환합니다.
-
-```js
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...findMarkdownFiles(fullPath, baseDir));  // 재귀!
-    } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      const rel = path.relative(baseDir, fullPath).replace(/\\/g, '/');
-      files.push(rel);
-    }
-  }
-```
-
-**`entry.isDirectory()`**: 이 항목이 폴더면 `true`.
-폴더면 → 그 폴더 안으로 들어가서 다시 탐색합니다 (재귀).
-
-**`entry.name.endsWith('.md')`**: 파일 이름이 `.md`로 끝나면 true.
-
-**`path.relative(baseDir, fullPath)`**
-`baseDir`을 기준으로 `fullPath`의 상대 경로를 만듭니다.
-예: baseDir=`/blog/posts`, fullPath=`/blog/posts/PC/언어/c-basics.md`
-→ `'PC/언어/c-basics.md'` (또는 Windows에서 `'PC\\언어\\c-basics.md'`)
-
-**`.replace(/\\/g, '/')`**
-Windows의 `\`를 `/`로 통일합니다. 코드를 OS에 관계없이 동작하게 합니다.
-
-**`files.push(...findMarkdownFiles(...))`**
-`...`(스프레드)로 재귀 결과 배열을 펼쳐서 `files`에 추가합니다.
-`push([...])`하면 배열이 배열 안에 들어가지만, `push(...[...])`하면 개별 항목들이 추가됩니다.
-
----
-
-### 포스트 데이터 수집
-
-```js
-for (const relPath of mdFiles) {
-  const fullPath = path.join(POSTS_DIR, relPath);
-  const raw      = fs.readFileSync(fullPath, 'utf-8');
-  const { meta } = parseFrontMatter(raw);
-
-  if (!meta.title) continue;
-```
-
-`if (!meta.title) continue`는 제목이 없는 파일(Front Matter가 없거나 title이 없는)을 건너뜁니다.
-`continue`는 현재 반복을 건너뛰고 다음 파일로 넘어갑니다.
-
-```js
-  const fileParts = relPath.replace(/\.md$/, '').split('/');
-  fileParts.pop();
-  const category = fileParts.join('/') || meta.category || '';
-```
-
-파일 경로에서 카테고리를 자동 추출합니다.
-
-예: `relPath = 'PC/언어/c-basics.md'`
-1. `.replace(/\.md$/, '')` → `'PC/언어/c-basics'`
-2. `.split('/')` → `['PC', '언어', 'c-basics']`
-3. `.pop()` → 마지막 요소(파일명) 제거 → `['PC', '언어']`
-4. `.join('/')` → `'PC/언어'`
-
-Front Matter에 category가 명시되면 그것을 우선 씁니다 (`meta.category || category`).
-
----
-
-### `posts.json` 저장
-
-```js
 fs.writeFileSync(OUTPUT, JSON.stringify(posts, null, 2), 'utf-8');
 ```
 
-**`JSON.stringify(posts, null, 2)`**
-JavaScript 배열을 JSON 문자열로 변환합니다.
-- 첫 번째 인자: 변환할 데이터
-- 두 번째 인자: replacer (특별한 처리 없으면 null)
-- 세 번째 인자: 들여쓰기 칸 수 (2칸). 사람이 읽기 좋은 형식으로 저장합니다.
+`fs.readFileSync(fullPath, 'utf-8')` → 파일 내용을 문자열로 읽기  
+`utf-8`을 지정해야 한글이 깨지지 않아요.
 
-**`fs.writeFileSync(경로, 내용, 인코딩)`**
-파일에 씁니다. 파일이 없으면 새로 만들고, 있으면 덮어씁니다.
+`fs.writeFileSync(OUTPUT, JSON.stringify(posts, null, 2), 'utf-8')` → 파일에 쓰기
 
 ---
 
-## 언제 실행하나
+## 정리
 
-```bash
-node build.js
-# 또는
-npm run build
+`node build.js` 한 번 실행으로:
+
+```
+posts/ 스캔
+  → 각 .md 파일 읽기
+  → Front Matter 파싱
+  → posts.json 생성
+  → sitemap.xml 생성
+  → robots.txt 생성
+  → config.js 생성
+  → playlist.json 생성
 ```
 
-새 글을 추가하거나 기존 글을 수정한 뒤에 실행합니다.
-그 다음 변경된 파일들을 GitHub에 push하면 자동으로 배포됩니다.
-
----
-
-## 다음 파일
-
-- **[전체 연결 구조]** — 모든 파일이 어떻게 연결되는지 한눈에 보기
+이 모든 게 자동으로 처리돼서 직접 JSON을 편집하지 않아도 됩니다.  
+글만 쓰고 `deploy.bat`을 실행하면 끝이에요.

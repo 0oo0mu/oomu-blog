@@ -1,173 +1,135 @@
 ---
-title: "[코드 해설 11] sidebar.js — 카테고리 폴더 트리 만들기"
-date: 2026-06-02
+title: "[코드 해설 11] sidebar.js — 폴더 트리 만들기"
+date: 2026-06-08
 category: 개발/코드해설
-tags: [JavaScript, 트리구조, 재귀]
-excerpt: 'PC/언어/C' 같은 경로를 파싱해서 폴더 트리로 만드는 방법. 재귀 함수와 트리 자료구조를 처음 보는 사람도 이해할 수 있게 설명합니다.
+tags: [JavaScript, 재귀, 트리구조]
+excerpt: 폴더 경로 문자열을 받아서 계층 구조 트리를 만드는 방법. 재귀 함수로 중첩 폴더를 처리하는 로직을 설명합니다.
 ---
-
-# sidebar.js — 카테고리 폴더 트리 만들기
 
 ## 이 파일이 하는 일
 
-왼쪽 사이드바의 폴더 트리를 만들고, 클릭하면 해당 카테고리로 필터링합니다.
+왼쪽 사이드바의 카테고리 트리를 담당합니다:
+- 게시글의 `category` 필드("개발/코드해설")를 파싱해서 폴더 구조 생성
+- 클릭하면 해당 카테고리 필터 적용
+- 폴더 열기/닫기 토글
+- 하위 폴더 게시글 수를 부모에 합산해서 표시
 
-포스트의 `category` 필드에 `"PC/언어/C"` 처럼 경로가 저장됩니다.
-이 경로들을 파싱해서 폴더 구조로 만드는 것이 핵심입니다.
+---
+
+## 카테고리 → 트리 구조 변환
+
+게시글마다 이런 `category` 값이 있습니다:
+```
+"개발"
+"개발/코드해설"
+"개발/팁"
+"일상"
+```
+
+이것을 이런 트리 구조로 변환해요:
 
 ```
-posts.json의 카테고리 값들:
-  "개발"
-  "개발"
-  "PC/언어"
-  "PC/언어/C"
-
-→ 사이드바 트리:
-  🗂 전체 (4)
-  📁 개발 (2)
-  📁 PC (2)
-    📁 언어 (2)
-      📄 C (1)
+전체 (4)
+├── 개발 (3)
+│   ├── 코드해설 (1)
+│   └── 팁 (1)
+└── 일상 (1)
 ```
 
 ---
 
-## 트리 자료구조 이해
+## 트리 데이터 구조 만들기
 
-코드를 보기 전에 트리가 어떤 구조인지 이해해야 합니다.
+```javascript
+const root = { _posts: posts.length, _children: {} };
 
-```js
-// "PC/언어/C" 포스트가 있을 때 만들어지는 트리 구조
+posts.forEach(post => {
+  if (!post.category) return;
+  const parts = post.category.split('/').filter(Boolean);
+  let node = root;
+
+  parts.forEach((part, depth) => {
+    if (!node._children[part]) {
+      node._children[part] = { _posts: 0, _children: {} };
+    }
+    if (depth === parts.length - 1) {
+      node._children[part]._posts++;
+    }
+    node = node._children[part];
+  });
+});
+```
+
+**"개발/코드해설" 처리 과정:**
+
+1. `"개발/코드해설".split('/')` → `['개발', '코드해설']`
+2. 첫 번째 반복 `part = '개발'`:  
+   - `root._children['개발']` 없으면 생성  
+   - 마지막이 아니므로 `_posts` 증가 안 함  
+   - `node`를 `개발` 노드로 이동
+3. 두 번째 반복 `part = '코드해설'`:  
+   - `개발._children['코드해설']` 없으면 생성  
+   - 마지막이므로 `_posts++`  
+   - `node`를 `코드해설` 노드로 이동
+
+결과:
+```javascript
 {
   _posts: 전체수,
   _children: {
-    "PC": {
-      _posts: 0,        // "PC" 카테고리 직접 포스트 없음
-      _total: 2,        // 하위 포함 2개
+    '개발': {
+      _posts: 0, // 개발 폴더 직접 게시글 없음
       _children: {
-        "언어": {
-          _posts: 1,    // "PC/언어" 직접 포스트 1개
-          _total: 2,    // 하위 포함 2개
-          _children: {
-            "C": {
-              _posts: 1, // "PC/언어/C" 직접 포스트 1개
-              _total: 1,
-              _children: {}
-            }
-          }
-        }
+        '코드해설': { _posts: 1, _children: {} }
       }
     }
   }
 }
 ```
 
-이 트리 구조를 코드로 만들고, DOM으로 그립니다.
-
 ---
 
-## 핵심 코드만 설명
+## calcTotal() — 하위 포함 합계 계산
 
-### 트리 구조 생성
-
-```js
-const root = { _posts: posts.length, _children: {} };
-
-posts.forEach(post => {
-  if (!post.category) return;
-
-  // "PC/언어/C" → ['PC', '언어', 'C']
-  const parts = post.category.split('/').filter(Boolean);
-  let node = root;
-
-  parts.forEach((part, depth) => {
-    // 이 이름의 자식 노드가 없으면 새로 만든다
-    if (!node._children[part]) {
-      node._children[part] = { _posts: 0, _children: {} };
-    }
-    // 마지막 파트에만 포스트 수 +1
-    if (depth === parts.length - 1) {
-      node._children[part]._posts++;
-    }
-    // 한 단계 아래로 내려간다
-    node = node._children[part];
-  });
-});
-```
-
-**`post.category.split('/')`**
-`'PC/언어/C'.split('/')` → `['PC', '언어', 'C']`
-문자열을 `/`를 기준으로 쪼갭니다.
-
-**`let node = root`**
-현재 위치를 추적하는 포인터입니다. 루트에서 시작합니다.
-
-**`parts.forEach((part, depth) => { ... })`**
-`['PC', '언어', 'C']`를 하나씩 처리합니다.
-- `part = 'PC'`, `depth = 0`: root 아래에 PC 노드 확인/생성, node를 PC로 이동
-- `part = '언어'`, `depth = 1`: PC 아래에 언어 노드 확인/생성, node를 언어로 이동
-- `part = 'C'`, `depth = 2`: 마지막! 언어 아래에 C 노드 확인/생성, `_posts++`
-
-**`depth === parts.length - 1`**
-마지막 파트인지 확인합니다. 길이가 3이면 마지막 인덱스는 2.
-마지막 파트에서만 `_posts++` 해야 합니다. 중간 폴더(`PC`, `언어`)에는 +1하지 않습니다.
-
----
-
-### 하위 합산 (재귀 함수)
-
-```js
+```javascript
 function calcTotal(node) {
   const childrenTotal = Object.values(node._children).reduce((sum, child) => {
-    return sum + calcTotal(child);  // 재귀!
+    return sum + calcTotal(child);
   }, 0);
   node._total = node._posts + childrenTotal;
   return node._total;
 }
 ```
 
-**재귀(Recursion):** 함수가 자기 자신을 호출하는 것입니다.
+**재귀 함수입니다.** 자기 자신을 호출해요.
 
-이 함수는 "내 자식들의 total을 다 더해줘"를 자식에게도 똑같이 시킵니다.
-가장 깊은 노드(자식이 없는)부터 계산해서 위로 올라옵니다.
+`Object.values(node._children)` → 자식 노드들의 배열  
+`.reduce((sum, child) => sum + calcTotal(child), 0)` → 각 자식을 재귀적으로 계산해서 합산  
+`node._total = node._posts + childrenTotal` → 직접 게시글 + 하위 게시글 합계
 
-**`Object.values(node._children)`**
-`_children` 객체의 값들만 배열로 꺼냅니다.
-예: `{ 'PC': {...}, '개발': {...} }` → `[{...}, {...}]`
-
-**`reduce((sum, child) => { ... }, 0)`**
-`reduce`는 배열을 하나의 값으로 줄입니다.
-`sum`은 누적값(초기값 0), `child`는 현재 처리 중인 자식 노드.
-각 자식의 `calcTotal` 결과를 더해갑니다.
+`개발` 폴더의 경우:
+- `개발._posts` = 0 (직접 게시글 없음)
+- `코드해설._total` = 1
+- `개발._total` = 0 + 1 = 1
 
 ---
 
-### 노드 렌더링 (재귀)
+## _renderNode() — 재귀 DOM 렌더링
 
-```js
+```javascript
 _renderNode(name, node, parentPath) {
-  const fullPath   = parentPath ? `${parentPath}/${name}` : name;
+  const fullPath = parentPath ? `${parentPath}/${name}` : name;
   const hasChildren = Object.keys(node._children).length > 0;
 
   const li = document.createElement('li');
-  const btn = document.createElement('button');
-  btn.innerHTML = `
-    ${hasChildren ? `<span class="tree-arrow">▶</span>` : `<span class="tree-arrow" style="opacity:0">▶</span>`}
-    <span class="tree-name">${hasChildren ? '📁' : '📄'} ${name}</span>
-    <span class="tree-count">${node._total}</span>
-  `;
+  li.dataset.path = fullPath;
 
-  btn.addEventListener('click', () => {
-    if (hasChildren) li.classList.toggle('open');
-    this._select(fullPath);
-  });
-
-  li.appendChild(btn);
+  // 버튼 생성 ...
 
   if (hasChildren) {
     const ul = document.createElement('ul');
     Object.entries(node._children).forEach(([childName, childNode]) => {
-      ul.appendChild(this._renderNode(childName, childNode, fullPath));  // 재귀!
+      ul.appendChild(this._renderNode(childName, childNode, fullPath));
     });
     li.appendChild(ul);
   }
@@ -176,40 +138,33 @@ _renderNode(name, node, parentPath) {
 },
 ```
 
-**`parentPath ? \`${parentPath}/${name}\` : name`**
-부모 경로가 있으면 합쳐서 전체 경로 생성.
-`parentPath = 'PC'`, `name = '언어'` → `fullPath = 'PC/언어'`
+자식이 있으면 그 자식도 `_renderNode()`로 만들어서 추가합니다.  
+자식의 자식도 같은 방식으로 처리해요.  
+이것이 **재귀(Recursion)**입니다.
 
-**`document.createElement('li')`**
-JavaScript로 HTML 요소를 만드는 방법입니다.
-`innerHTML = '...'`은 문자열로 넣는 방법, `createElement`는 객체로 만드는 방법입니다.
-
-**재귀 렌더링**
-자식이 있으면 `<ul>`을 만들고, 각 자식에 대해 `_renderNode`를 다시 호출합니다.
-이렇게 트리 깊이에 상관없이 모든 노드를 자동으로 렌더링합니다.
+`fullPath` = 부모 경로 + "/" + 현재 이름  
+예: `parentPath = "개발"`, `name = "코드해설"` → `fullPath = "개발/코드해설"`
 
 ---
 
-### 폴더 열기/닫기 버그 수정 포인트
+## 조상 노드만 펼치기
 
-```js
-// ✅ 수정 후 (현재 코드)
-// 조상 노드만 열기 (자기 자신 제외)
-const ancestors = parts.slice(0, -1);
-ancestors.forEach(part => {
-  // ...ancestors만 open
-});
+```javascript
+if (category !== 'all') {
+  const parts = category.split('/');
+  const ancestors = parts.slice(0, -1); // 자기 자신 제외
+  let cur = '';
+  ancestors.forEach(part => {
+    cur = cur ? `${cur}/${part}` : part;
+    const node = treeEl.querySelector(`[data-path="${cur}"]`);
+    if (node) node.classList.add('open');
+  });
+}
 ```
 
-**`parts.slice(0, -1)`**
-배열의 마지막 요소를 제외한 나머지.
-`['PC', '언어', 'C'].slice(0, -1)` → `['PC', '언어']`
+`parts.slice(0, -1)` → 마지막 요소를 제외한 배열  
+`"개발/코드해설".split('/')` = `['개발', '코드해설']`  
+`.slice(0, -1)` = `['개발']` → 부모인 "개발"만 펼침
 
-수정 전에는 자기 자신(`'C'`)도 포함해서 열었습니다. 그래서 클릭으로 닫아도 즉시 다시 열렸습니다.
-수정 후: 클릭 핸들러의 `toggle()`이 열고/닫고를 결정하면, `_select()`는 그 결과를 건드리지 않습니다.
-
----
-
-## 다음 파일
-
-- **[12] toc.js** — 글 읽는 중 현재 섹션을 하이라이트하는 목차
+자기 자신(`코드해설`)은 클릭 핸들러의 `toggle()`로 이미 처리됐기 때문에 건드리지 않아요.  
+여기서도 열면 토글이 의미 없어지거든요.

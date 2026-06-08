@@ -1,144 +1,98 @@
 ---
 title: "[코드 해설 01] app.js — 모듈들의 우체국"
-date: 2026-06-02
+date: 2026-06-08
 category: 개발/코드해설
 tags: [JavaScript, 설계, 이벤트]
 excerpt: 블로그의 모든 기능이 서로 소통하는 방법. 이벤트 버스와 모듈 레지스트리를 한 줄씩 파헤칩니다.
 ---
 
-# app.js — 모듈들의 우체국
-
 ## 이 파일이 하는 일
 
-이 블로그에는 여러 기능이 있습니다. 검색, 필터, 사이드바, 뮤직 플레이어, 다크모드… 이 기능들이 서로 정보를 주고받아야 합니다.
+`app.js`는 두 가지 역할을 합니다:
 
-예를 들어, 사이드바에서 "PC" 카테고리를 클릭하면 → 카드 목록이 PC 관련 글만 보여줘야 합니다.
+1. **모듈 등록** — 각 기능(검색, 사이드바, 음악 등)을 등록하고 초기화
+2. **이벤트 버스** — 모듈끼리 직접 연락하지 않고 app.js를 통해 소통
 
-이때 두 가지 방법이 있습니다.
+---
 
-**방법 1 (나쁜 방법):** 사이드바가 카드 목록을 직접 import해서 조작한다.
+## 왜 이게 필요할까?
+
+검색창(`search.js`)이 검색어를 받으면, 카드 목록(`renderer.js`)이 필터링된 결과를 보여줘야 합니다.
+
+**나쁜 방법:**
+```javascript
+// search.js 안에서 직접 renderer를 가져와서 호출
+import Renderer from './renderer.js';
+Renderer.render(filteredPosts);
 ```
-sidebar.js ──import──▶ renderer.js ──import──▶ filter.js
-```
-문제: 이 방법은 파일들이 서로 얽혀서, 하나를 바꾸면 다른 것들도 다 수정해야 합니다.
 
-**방법 2 (좋은 방법, 이 블로그 방식):** 우체국(App)을 통해 편지(이벤트)를 주고받는다.
-```
-sidebar.js ──편지 발송──▶ App(우체국) ──편지 배달──▶ filter.js
-```
-이 방법은 사이드바가 "나 카테고리 바꿨어"라고 공지만 하면, 듣고 싶은 모듈이 알아서 반응합니다. 서로 직접 알 필요가 없습니다.
+이렇게 하면 search.js가 renderer.js에 **직접 의존**하게 됩니다.  
+나중에 renderer를 수정하거나 없애면 search.js도 같이 고쳐야 해요.
 
-이 역할을 하는 파일이 `app.js`입니다.
+**좋은 방법 (이 블로그 방식):**
+```javascript
+// search.js는 그냥 소식만 전달
+App.emit('filter:search', { query: '자바스크립트' });
+
+// renderer.js는 자기가 관심 있는 소식만 구독
+App.on('posts:filtered', ({ posts }) => {
+  // 카드 그리기
+});
+```
+
+search.js와 renderer.js가 서로 모릅니다. app.js만 알면 돼요.
 
 ---
 
 ## 전체 코드
 
-```js
+```javascript
 const App = {
-  modules: {},
-  _listeners: {},
+  modules: {},      // 등록된 모듈들 저장
+  _listeners: {},   // 이벤트 리스너들 저장
 
-  register(name, module) {
-    this.modules[name] = module;
-    if (typeof module.init === 'function') {
-      module.init();
-    }
-  },
-
-  emit(event, data) {
-    const listeners = this._listeners[event] || [];
-    listeners.forEach(cb => {
-      try {
-        cb(data);
-      } catch (e) {
-        console.error(`[App] 이벤트 핸들러 오류 (${event}):`, e);
-      }
-    });
-  },
-
-  on(event, cb) {
-    if (!this._listeners[event]) {
-      this._listeners[event] = [];
-    }
-    this._listeners[event].push(cb);
-    return () => {
-      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
-    };
-  },
-
-  get(name) {
-    return this.modules[name];
-  },
+  register(name, module) { ... },
+  emit(event, data) { ... },
+  on(event, cb) { ... },
+  get(name) { ... },
 };
-
-export default App;
 ```
 
 ---
 
-## 한 줄씩 설명
+## register() — 모듈 등록
 
-### 객체 선언
-
-```js
-const App = {
-```
-
-`const`는 "이 변수는 나중에 다른 값으로 바꿀 수 없다"는 선언입니다.
-`App`은 변수 이름입니다. `{}`는 객체(여러 정보를 담는 상자)를 만든다는 뜻입니다.
-
----
-
-### 저장공간 두 개
-
-```js
-modules: {},
-_listeners: {},
-```
-
-`modules`는 등록된 기능들을 보관하는 서랍입니다.
-예시: `{ 'search': SearchModule, 'sidebar': SidebarModule }`
-
-`_listeners`는 "어떤 이벤트가 왔을 때 누구를 불러야 하나"를 기록하는 명단입니다.
-예시: `{ 'posts:loaded': [함수A, 함수B], 'theme:change': [함수C] }`
-
-이름 앞에 `_`가 붙으면 "이건 내부용이야, 밖에서 직접 쓰지 마"라는 관례입니다.
-
----
-
-### `register` — 모듈 등록
-
-```js
+```javascript
 register(name, module) {
-  this.modules[name] = module;
+  this.modules[name] = module;       // 모듈을 이름으로 저장
   if (typeof module.init === 'function') {
-    module.init();
+    module.init();                   // init 함수가 있으면 자동 실행
   }
 },
 ```
 
-**`register(name, module)`**
-함수 이름은 `register`이고, `name`과 `module` 두 가지를 받습니다.
-예: `App.register('search', SearchModule)` → name='search', module=SearchModule
+**한 줄씩 설명:**
 
-**`this.modules[name] = module`**
-`this`는 App 자신을 가리킵니다.
-`this.modules['search'] = SearchModule` 이런 식으로 서랍에 넣는 것입니다.
+`this.modules[name] = module;`  
+→ `modules`라는 상자에 모듈을 넣습니다. 예: `modules['search'] = SearchModule`
 
-**`if (typeof module.init === 'function')`**
-`typeof`는 "이게 어떤 종류야?"를 물어보는 것입니다.
-`module.init`이 함수라면 true, 없거나 다른 타입이면 false입니다.
+`if (typeof module.init === 'function')`  
+→ "init이라는 함수가 있냐?"를 확인합니다. `typeof`는 타입(종류)을 알려주는 키워드예요.
 
-**`module.init()`**
-모듈의 init 함수를 자동으로 실행합니다.
-덕분에 `App.register('search', Search)` 한 줄만 써도 Search.init()이 자동 실행됩니다.
+`module.init()`  
+→ 있으면 바로 실행합니다. 각 모듈의 초기화 함수가 자동으로 호출돼요.
+
+**사용 예시 (app-index.js에서):**
+```javascript
+App.register('search', Search);   // Search.init() 자동 호출
+App.register('sidebar', Sidebar); // Sidebar.init() 자동 호출
+```
 
 ---
 
-### `emit` — 이벤트 발행 (편지 발송)
+## emit() — 이벤트 발행 (소식 보내기)
 
-```js
+```javascript
 emit(event, data) {
   const listeners = this._listeners[event] || [];
   listeners.forEach(cb => {
@@ -151,24 +105,31 @@ emit(event, data) {
 },
 ```
 
-**`const listeners = this._listeners[event] || []`**
-`this._listeners['posts:loaded']`처럼 이 이벤트를 구독한 함수 목록을 가져옵니다.
-`|| []`는 "해당 이벤트를 구독한 사람이 없으면 빈 배열을 써라"입니다.
-빈 배열이면 아래 `forEach`가 아무것도 안 하고 끝납니다. 오류가 나지 않습니다.
+**한 줄씩 설명:**
 
-**`listeners.forEach(cb => { ... })`**
-`forEach`는 배열의 모든 항목을 하나씩 꺼내서 실행합니다.
-`cb`는 각 구독 함수입니다 (cb = callback의 줄임말).
+`const listeners = this._listeners[event] || [];`  
+→ 이 이벤트를 구독한 함수들을 가져옵니다.  
+구독한 게 없으면 `undefined`가 되는데, `|| []`로 빈 배열로 대체합니다.
 
-**`try { cb(data); } catch (e) { ... }`**
-`try`는 "이걸 실행해봐". `catch`는 "만약 오류가 나면 이걸 해".
-하나의 구독 함수에서 오류가 나도 다른 구독 함수들은 계속 실행됩니다.
+`listeners.forEach(cb => { cb(data); })`  
+→ 구독한 함수들을 하나씩 실행합니다.  
+`forEach`는 "배열의 각 항목에 대해 이 작업을 해라"는 뜻이에요.
+
+`try { ... } catch (e) { ... }`  
+→ 실행 중 오류가 나도 다른 구독자는 계속 실행됩니다. 하나가 터져도 나머지는 괜찮아요.
+
+**사용 예시:**
+```javascript
+// posts-loader.js에서 게시글 로드 후
+App.emit('posts:loaded', { posts: [...] });
+// → sidebar, filter, renderer 등 구독자들이 모두 실행됨
+```
 
 ---
 
-### `on` — 이벤트 구독 (편지 받기 신청)
+## on() — 이벤트 구독 (소식 받기)
 
-```js
+```javascript
 on(event, cb) {
   if (!this._listeners[event]) {
     this._listeners[event] = [];
@@ -181,68 +142,55 @@ on(event, cb) {
 },
 ```
 
-**`if (!this._listeners[event])`**
-`!`는 "~이 아니면"입니다. 이 이벤트 명단이 아직 없으면 빈 배열을 만듭니다.
+**한 줄씩 설명:**
 
-**`this._listeners[event].push(cb)`**
-`push`는 배열 맨 뒤에 항목을 추가합니다.
-"이 이벤트가 왔을 때 cb를 실행해줘"라고 등록하는 것입니다.
+`if (!this._listeners[event]) { this._listeners[event] = []; }`  
+→ 이 이벤트에 대한 목록이 없으면 빈 배열을 만듭니다.  
+처음 구독자가 등록될 때 자리를 만드는 거예요.
 
-**`return () => { ... }`**
-구독 해제 함수를 반환합니다. 이걸 나중에 호출하면 구독이 취소됩니다.
+`this._listeners[event].push(cb);`  
+→ 구독 함수를 목록에 추가합니다.  
+`push`는 배열의 맨 끝에 항목을 추가하는 메서드예요.
 
-```js
-const off = App.on('theme:change', handler);
-// 나중에 구독 해제할 때:
-off();
-```
+`return () => { ... };`  
+→ **구독 해제 함수**를 반환합니다. 나중에 이 함수를 호출하면 구독이 취소돼요.
 
-**`this._listeners[event].filter(fn => fn !== cb)`**
-`filter`는 배열에서 조건을 만족하는 것만 남깁니다.
-"cb랑 다른 것들만 남겨라" = cb를 제거하는 것입니다.
+`this._listeners[event].filter(fn => fn !== cb)`  
+→ 내 함수(`cb`)를 제외한 나머지 함수들만 남깁니다.  
+`filter`는 "조건에 맞는 것만 남겨라"는 배열 메서드예요.
 
----
-
-### `get` — 모듈 가져오기
-
-```js
-get(name) {
-  return this.modules[name];
-},
-```
-
-등록된 모듈을 이름으로 꺼냅니다.
-`App.get('music')` → 뮤직 플레이어 모듈 반환.
-
----
-
-### `export default App`
-
-```js
-export default App;
-```
-
-이 파일을 다른 파일에서 불러올 수 있도록 내보냅니다.
-다른 파일에서 `import App from './app.js'` 라고 쓰면 이 App 객체를 쓸 수 있습니다.
-
----
-
-## 실제 사용 예시
-
-```js
-// search.js — 검색어가 바뀌면 이벤트 발행
-App.emit('filter:search', { query: '자바스크립트' });
-
-// filter.js — 검색 이벤트를 구독
-App.on('filter:search', ({ query }) => {
-  console.log('검색어가 바뀌었어:', query);
-  // 포스트 필터링 실행...
+**사용 예시:**
+```javascript
+// sidebar.js에서
+App.on('posts:loaded', ({ posts }) => {
+  this._build(posts); // 게시글 목록으로 카테고리 트리 만들기
 });
 ```
 
 ---
 
-## 다음 파일
+## get() — 모듈 가져오기
 
-- **[02] router.js** — 페이지 이동 없이 화면을 바꾸는 SPA 라우터
-- **[전체 연결 구조]** — 모든 모듈이 어떻게 app.js를 통해 연결되는지 한눈에 보기
+```javascript
+get(name) {
+  return this.modules[name];
+},
+```
+
+등록된 모듈을 이름으로 꺼내 씁니다.  
+```javascript
+const sidebar = App.get('sidebar');
+```
+
+---
+
+## 정리
+
+| 함수 | 역할 | 비유 |
+|------|------|------|
+| `register()` | 모듈 등록 + 초기화 | 직원 입사 |
+| `emit()` | 이벤트 발행 | 사내 방송 |
+| `on()` | 이벤트 구독 | 방송 채널 신청 |
+| `get()` | 모듈 조회 | 직원 명부 조회 |
+
+이 4가지 함수만으로 15개의 모듈이 서로 소통합니다.

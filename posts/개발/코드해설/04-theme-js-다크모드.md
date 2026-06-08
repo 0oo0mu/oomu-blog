@@ -1,157 +1,120 @@
 ---
 title: "[코드 해설 04] theme.js — 다크모드는 어떻게 동작하나"
-date: 2026-06-02
+date: 2026-06-08
 category: 개발/코드해설
 tags: [JavaScript, CSS, 다크모드]
-excerpt: 버튼 하나로 전체 색상이 바뀌는 다크모드. body가 아닌 html에 클래스를 붙이는 이유, 섬광 방지까지 한 줄씩 설명합니다.
+excerpt: 버튼 하나로 전체 색상이 바뀌는 마법. classList.toggle과 CSS 변수로 다크모드를 구현하는 방법을 설명합니다.
 ---
 
-# theme.js — 다크모드는 어떻게 동작하나
+## 이 파일이 하는 일
 
-## 다크모드의 원리
+헤더의 🌙 버튼을 누르면 전체 화면이 어두워집니다.  
+다시 누르면 밝아지고, 새로고침해도 설정이 유지돼요.
 
-다크모드는 CSS 변수(Custom Property)로 구현합니다.
+---
+
+## 핵심 원리: HTML에 클래스 붙이기
+
+```html
+<!-- 라이트 모드 -->
+<html>
+
+<!-- 다크 모드 -->
+<html class="dark">
+```
+
+JavaScript는 `<html>` 태그에 `dark` 클래스를 붙이거나 떼기만 합니다.  
+CSS가 그 클래스를 감지해서 색상을 바꿔요.
 
 ```css
-/* css/variables.css */
+/* CSS에서 */
 :root {
-  --bg: #ffffff;       /* 배경색 */
-  --text: #1a1a1a;     /* 글자색 */
+  --bg: #ffffff;
+  --text: #1a1a1a;
 }
 
 :root.dark {
-  --bg: #0d0d0d;
-  --text: #e0e0e0;
+  --bg: #0f0f0f;
+  --text: #e5e5e5;
 }
 ```
 
-`<html>` 태그에 `dark` 클래스가 붙으면 `:root.dark` 규칙이 적용되어 변수가 교체됩니다.
-페이지 전체가 이 변수를 쓰고 있으므로 클래스 하나만 붙이면 전체 색상이 바뀝니다.
+`:root.dark` = "html 태그에 dark 클래스가 있을 때"
 
 ---
 
-## 전체 코드
+## 전체 코드 구조
 
-```js
-import Storage from './storage.js';
-import App from './app.js';
-
-const STORAGE_KEY = 'theme';
-
+```javascript
 const Theme = {
-  init() {
-    const saved = Storage.get(STORAGE_KEY, 'light');
-    this._apply(saved);
-
-    const btn = document.getElementById('themeToggle');
-    if (btn) btn.addEventListener('click', () => this.toggle());
-  },
-
-  toggle() {
-    const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    this._apply(next);
-    Storage.set(STORAGE_KEY, next);
-    App.emit('theme:change', { theme: next });
-  },
-
-  current() {
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-  },
-
-  _apply(theme) {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      this._setButton('☀️', '라이트');
-    } else {
-      document.documentElement.classList.remove('dark');
-      this._setButton('🌙', '다크');
-    }
-  },
-
-  _setButton(icon, label) {
-    const iconEl  = document.getElementById('themeIcon');
-    const labelEl = document.getElementById('themeLabel');
-    if (iconEl)  iconEl.textContent  = icon;
-    if (labelEl) labelEl.textContent = label;
-  },
+  init() { ... },    // 초기화
+  toggle() { ... },  // 토글 (라이트 ↔ 다크)
+  current() { ... }, // 현재 테마 반환
+  _apply(theme) { ... },  // 실제 적용 (내부)
+  _setButton(icon, label) { ... }, // 버튼 업데이트 (내부)
 };
-
-export default Theme;
 ```
 
 ---
 
-## 한 줄씩 설명
+## init() — 초기화
 
-### 가져오기
-
-```js
-import Storage from './storage.js';
-import App from './app.js';
-```
-
-[03] storage.js에서 만든 Storage 도구와, [01] app.js의 이벤트 버스를 불러옵니다.
-
-```js
-const STORAGE_KEY = 'theme';
-```
-
-localStorage에 저장할 때 쓸 키 이름입니다. 오타를 방지하기 위해 상수로 선언합니다.
-이 값을 여러 곳에서 쓴다면, 오타가 나도 한 곳만 고치면 됩니다.
-
----
-
-### `init` — 초기화
-
-```js
+```javascript
 init() {
-  const saved = Storage.get(STORAGE_KEY, 'light');
+  const saved = Storage.get('theme', 'light');
   this._apply(saved);
-```
 
-페이지가 로드될 때 실행됩니다.
-`Storage.get('theme', 'light')` — 저장된 테마를 가져오고, 없으면 'light'를 기본값으로 씁니다.
-가져온 테마를 즉시 적용합니다.
-
-```js
   const btn = document.getElementById('themeToggle');
   if (btn) btn.addEventListener('click', () => this.toggle());
 },
 ```
 
-HTML에서 id가 `themeToggle`인 버튼을 찾아서 클릭 이벤트를 연결합니다.
-`if (btn)`은 "버튼이 있을 때만 연결"입니다. 버튼이 없는 페이지에서 오류가 나지 않습니다.
+**한 줄씩 설명:**
+
+`Storage.get('theme', 'light')`  
+→ 저장된 테마를 가져옵니다. 없으면 `'light'`를 기본값으로 사용해요.
+
+`this._apply(saved)`  
+→ 저장된 테마를 즉시 화면에 적용합니다.
+
+`btn.addEventListener('click', () => this.toggle())`  
+→ 버튼 클릭 시 toggle()을 실행하도록 연결합니다.
 
 ---
 
-### `toggle` — 전환
+## toggle() — 전환
 
-```js
+```javascript
 toggle() {
   const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-```
-
-`document.documentElement`는 `<html>` 태그입니다.
-`classList.contains('dark')`는 "현재 dark 클래스가 붙어있냐?"를 확인합니다.
-붙어있으면(= 지금 다크) → 'light'로 전환
-없으면(= 지금 라이트) → 'dark'로 전환
-
-```js
   this._apply(next);
-  Storage.set(STORAGE_KEY, next);
+  Storage.set('theme', next);
   App.emit('theme:change', { theme: next });
 },
 ```
 
-1. 새 테마 적용
-2. localStorage에 저장 (새로고침 후에도 유지)
-3. 이벤트 발행 (다른 모듈이 테마 변경에 반응할 수 있도록)
+**한 줄씩 설명:**
+
+`document.documentElement.classList.contains('dark')`  
+→ `<html>` 태그에 `dark` 클래스가 있는지 확인합니다.  
+`document.documentElement` = `<html>` 요소  
+`classList.contains('dark')` = dark 클래스가 있으면 `true`
+
+`? 'light' : 'dark'`  
+→ 삼항 연산자. "dark가 있으면 light로, 없으면 dark로"
+
+`Storage.set('theme', next)`  
+→ 선택을 localStorage에 저장합니다. 새로고침 후에도 유지돼요.
+
+`App.emit('theme:change', { theme: next })`  
+→ 다른 모듈에 "테마가 바뀌었어요!"라고 알립니다.  
+차트나 캔버스 같은 요소들이 색상을 업데이트할 때 이 이벤트를 사용할 수 있어요.
 
 ---
 
-### `_apply` — 실제 클래스 적용
+## _apply() — 실제 적용
 
-```js
+```javascript
 _apply(theme) {
   if (theme === 'dark') {
     document.documentElement.classList.add('dark');
@@ -163,62 +126,49 @@ _apply(theme) {
 },
 ```
 
-`<html>` 태그에 `dark` 클래스를 붙이거나 떼고, 버튼 아이콘도 업데이트합니다.
+**한 줄씩 설명:**
 
-다크모드일 때는 "☀️ 라이트" 버튼 (클릭하면 라이트로 전환한다는 의미)
-라이트모드일 때는 "🌙 다크" 버튼
+`document.documentElement.classList.add('dark')`  
+→ `<html>` 태그에 `dark` 클래스를 추가합니다.  
+이 순간 CSS의 `:root.dark { ... }` 규칙이 활성화돼요.
+
+`classList.remove('dark')`  
+→ `dark` 클래스를 제거합니다.
+
+버튼 아이콘은 현재 모드의 **반대**를 표시합니다.  
+다크 모드일 때는 "☀️ 라이트" (라이트로 바꾸겠다는 의미)  
+라이트 모드일 때는 "🌙 다크" (다크로 바꾸겠다는 의미)
 
 ---
 
-## 왜 `<body>`가 아닌 `<html>`에 클래스를 붙이나?
+## 섬광 방지 (Flash of Unstyled Content)
 
-이 블로그에는 **섬광 방지** 코드가 있습니다. 각 HTML 파일 `<head>` 안에 이런 스크립트가 있습니다.
+페이지를 처음 열 때 JS가 실행되기 전 잠깐 하얀 화면이 번쩍이는 문제가 있어요.  
+다크모드 사용자에게 특히 불쾌합니다.
+
+이 블로그는 `index.html`의 `<head>`에 인라인 스크립트가 있습니다:
 
 ```html
 <head>
   <script>
-    // CSS가 로드되기 전에 실행됨
+    // CSS 로드 전에 미리 dark 클래스 적용
     if (localStorage.getItem('theme') === '"dark"') {
       document.documentElement.classList.add('dark');
     }
   </script>
-  <link rel="stylesheet" href="css/variables.css"> <!-- 나중에 로드됨 -->
 </head>
 ```
 
-HTML을 위에서부터 읽으면 `<head>` 안 스크립트가 CSS보다 먼저 실행됩니다.
-이 시점에 `document.body`는 아직 null입니다. `<body>` 태그가 파싱되지 않았거든요.
-하지만 `document.documentElement`(`<html>`)는 항상 존재합니다.
-
-결과: CSS가 로드되는 순간 이미 `<html>`에 `dark` 클래스가 붙어있어서 처음부터 다크 색상이 적용됩니다. 흰 화면이 잠깐 보이는 **섬광(FOUC)**이 없습니다.
+CSS보다 먼저 실행되어 화면이 그려지기 전에 다크 클래스를 붙입니다.  
+이 덕분에 번쩍임 없이 처음부터 다크모드로 보입니다.
 
 ---
 
-## 흐름 정리
+## 정리
 
-```
-페이지 로드
-   │
-   ▼
-<head>의 인라인 스크립트 실행
-   → localStorage 확인 → <html>에 즉시 dark 클래스 붙임
-   │
-   ▼
-CSS 로드 (이미 dark 클래스 있으므로 처음부터 다크 색상)
-   │
-   ▼
-Theme.init() 실행
-   → Storage에서 저장된 테마 확인 → _apply() → 버튼 아이콘 설정
-
-테마 버튼 클릭
-   │
-   ▼
-toggle()
-   → 현재 클래스 확인 → _apply() → Storage.set() → App.emit()
-```
-
----
-
-## 다음 파일
-
-- **[05] accent.js** — 8가지 컬러 테마 프리셋
+| 단계 | 코드 | 설명 |
+|------|------|------|
+| 1 | `classList.add('dark')` | `<html>` 에 클래스 추가 |
+| 2 | CSS `:root.dark` 규칙 활성화 | 자동으로 색상 변수 바뀜 |
+| 3 | `Storage.set('theme', 'dark')` | 설정 저장 |
+| 4 | 새로고침 | 저장된 값 읽어서 다시 적용 |
