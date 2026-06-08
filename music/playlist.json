@@ -1,14 +1,6 @@
 [
   {
-    "title": "예시 곡 1",
-    "artist": "아티스트명",
-    "src": "song1.mp3",
-    "cover": ""
-  },
-  {
-    "title": "예시 곡 2 (외부 URL)",
-    "artist": "아티스트명",
-    "src": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    "cover": ""
+    "title": "Darci - On My Own (Skeler Remix) (Official) - Darci",
+    "file": "music/Darci - On My Own (Skeler Remix) (Official) - Darci.mp3"
   }
 ]

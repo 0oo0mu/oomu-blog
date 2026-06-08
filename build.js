@@ -230,7 +230,39 @@ export default Config;
 }
 
 // ══════════════════════════════════════════════════════
-// [8] 메인 실행
+// [8] playlist.json 자동 생성
+// ══════════════════════════════════════════════════════
+
+/**
+ * music/ 폴더를 스캔해서 playlist.json을 자동 생성합니다.
+ * 파일명에서 확장자를 제거한 값을 제목으로 사용합니다.
+ */
+function generatePlaylist() {
+  const musicDir      = path.join(__dirname, 'music');
+  const playlistPath  = path.join(musicDir, 'playlist.json');
+  const audioExts     = ['.mp3', '.ogg', '.wav', '.flac', '.m4a'];
+
+  if (!fs.existsSync(musicDir)) {
+    console.log('  ⚠️  music/ 폴더 없음 — playlist.json 건너뜀');
+    return;
+  }
+
+  const files = fs.readdirSync(musicDir).filter(f => {
+    const ext = path.extname(f).toLowerCase();
+    return audioExts.includes(ext);
+  });
+
+  const playlist = files.map(f => ({
+    title: path.basename(f, path.extname(f)),
+    file:  'music/' + f,
+  }));
+
+  fs.writeFileSync(playlistPath, JSON.stringify(playlist, null, 2), 'utf-8');
+  console.log(`  ✅ music/playlist.json 생성됨 (${playlist.length}곡)`);
+}
+
+// ══════════════════════════════════════════════════════
+// [9] 메인 실행
 // ══════════════════════════════════════════════════════
 
 console.log(`\n🔨 빌드 시작 — ${config.siteName}\n`);
@@ -270,5 +302,6 @@ console.log('\n📦 부가 파일 생성 중...');
 generateSitemap(posts);
 generateRobots();
 generateFrontendConfig();
+generatePlaylist();
 
 console.log(`\n✨ 빌드 완료!\n`);
