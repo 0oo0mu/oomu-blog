@@ -14,6 +14,209 @@
     "excerpt": "프레임워크 없이 HTML, CSS, JavaScript만으로 마크다운 블로그를 만들었습니다. 모듈화 설계, 다크모드, ToC, 검색, 뮤직 플레이어까지 어떻게 구현했는지 정리했어요."
   },
   {
+    "file": "개발/이-블로그의-코드-구조-완전-해설.md",
+    "title": "이 블로그는 어떻게 만들었나 — 코드 완전 해설",
+    "date": "2026-06-02",
+    "category": "개발",
+    "tags": [
+      "JavaScript",
+      "SPA",
+      "블로그"
+    ],
+    "excerpt": "이 블로그를 구성하는 모든 JS 파일을 하나씩 뜯어봅니다. Core 레이어부터 Modules, 빌드 스크립트까지 전부 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/00-전체연결구조.md",
+    "title": "\"[코드 해설 00] 전체 연결 구조 — 모든 파일이 어떻게 이어지나\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "설계",
+      "구조"
+    ],
+    "excerpt": "15개 파일이 어떻게 서로 연결되는지 한눈에 봅니다. 페이지 로드부터 카드 클릭, 검색, 글 읽기까지 전체 흐름을 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/01-app-js-이벤트버스.md",
+    "title": "\"[코드 해설 01] app.js — 모듈들의 우체국\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "설계",
+      "이벤트"
+    ],
+    "excerpt": "블로그의 모든 기능이 서로 소통하는 방법. 이벤트 버스와 모듈 레지스트리를 한 줄씩 파헤칩니다."
+  },
+  {
+    "file": "개발/코드해설/02-router-js-SPA라우터.md",
+    "title": "\"[코드 해설 02] router.js — 음악이 끊기지 않는 페이지 이동\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "SPA",
+      "라우터"
+    ],
+    "excerpt": "페이지를 이동하지 않고 화면만 바꾸는 SPA 라우터. history.pushState와 이벤트 위임을 한 줄씩 파헤칩니다."
+  },
+  {
+    "file": "개발/코드해설/03-storage-js-로컬스토리지.md",
+    "title": "\"[코드 해설 03] storage.js — 브라우저에 데이터 저장하기\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "localStorage",
+      "저장"
+    ],
+    "excerpt": "다크모드 설정, 음악 재생 위치, 컬러 테마... 새로고침해도 기억하려면? localStorage를 안전하게 쓰는 래퍼 모듈을 한 줄씩 파헤칩니다."
+  },
+  {
+    "file": "개발/코드해설/04-theme-js-다크모드.md",
+    "title": "\"[코드 해설 04] theme.js — 다크모드는 어떻게 동작하나\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "CSS",
+      "다크모드"
+    ],
+    "excerpt": "버튼 하나로 전체 색상이 바뀌는 다크모드. body가 아닌 html에 클래스를 붙이는 이유, 섬광 방지까지 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/05-accent-js-컬러테마.md",
+    "title": "\"[코드 해설 05] accent.js — 8가지 컬러 프리셋\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "CSS변수",
+      "테마"
+    ],
+    "excerpt": "인디고, 블루, 에메랄드... 8가지 색상 프리셋을 CSS 변수 교체로 구현하는 방법을 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/06-env-js-환경감지.md",
+    "title": "\"[코드 해설 06] env.js — 로컬인가 배포인가\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "환경설정"
+    ],
+    "excerpt": "내 컴퓨터에서 실행 중인지, 인터넷에 배포된 것인지 감지해서 에디터 버튼을 보이거나 숨기는 간단하지만 중요한 파일입니다."
+  },
+  {
+    "file": "개발/코드해설/07-posts-loader-js-게시글로더.md",
+    "title": "\"[코드 해설 07] posts-loader.js — 게시글 목록 불러오기\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "fetch",
+      "async/await"
+    ],
+    "excerpt": "fetch로 posts.json을 불러오고, 날짜 순으로 정렬해서 이벤트로 알려주는 로더. async/await와 캐싱 패턴을 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/08-filter-js-통합필터.md",
+    "title": "\"[코드 해설 08] filter.js — 카테고리·태그·검색어 통합 필터\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "필터링",
+      "이벤트"
+    ],
+    "excerpt": "세 가지 필터를 AND 조건으로 합치는 방법. filter(), every(), 계층 카테고리 매칭을 한 줄씩 파헤칩니다."
+  },
+  {
+    "file": "개발/코드해설/09-search-js-검색.md",
+    "title": "\"[코드 해설 09] search.js — 실시간 검색과 디바운스\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "검색",
+      "디바운스"
+    ],
+    "excerpt": "타이핑할 때마다 검색하면 너무 느려집니다. 디바운스로 200ms를 기다렸다가 실행하는 방법을 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/10-renderer-js-카드렌더러.md",
+    "title": "\"[코드 해설 10] renderer.js — 포스트 카드를 화면에 그리기\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "DOM",
+      "렌더링"
+    ],
+    "excerpt": "filter.js가 걸러낸 포스트 목록을 받아서 HTML 카드로 만들어 화면에 뿌리는 렌더러. 검색어 하이라이트와 XSS 방지까지 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/11-sidebar-js-카테고리트리.md",
+    "title": "\"[코드 해설 11] sidebar.js — 카테고리 폴더 트리 만들기\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "트리구조",
+      "재귀"
+    ],
+    "excerpt": "'PC/언어/C' 같은 경로를 파싱해서 폴더 트리로 만드는 방법. 재귀 함수와 트리 자료구조를 처음 보는 사람도 이해할 수 있게 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/12-toc-js-목차.md",
+    "title": "\"[코드 해설 12] toc.js — 스크롤 따라 움직이는 목차\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "scroll",
+      "목차"
+    ],
+    "excerpt": "글을 읽으면서 현재 섹션이 목차에 하이라이트됩니다. requestAnimationFrame으로 성능을 최적화하고, IntersectionObserver 대신 scroll 이벤트를 쓴 이유를 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/13-music-player-js-뮤직플레이어.md",
+    "title": "\"[코드 해설 13] music-player.js — 페이지 이동해도 끊기지 않는 뮤직 플레이어\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "Audio",
+      "뮤직플레이어"
+    ],
+    "excerpt": "셔플, 반복, 볼륨, 재생 위치 복원까지 갖춘 뮤직 플레이어. HTMLAudioElement, Fisher-Yates 셔플, 상태 저장/복원을 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/14-markdown-js-마크다운파서.md",
+    "title": "\"[코드 해설 14] markdown.js — 마크다운을 HTML로 변환하기\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "JavaScript",
+      "마크다운",
+      "파싱"
+    ],
+    "excerpt": "글 파일(.md)을 HTML로 변환하고, 맨 위의 --- 구간(Front Matter)에서 제목·날짜·태그를 뽑아내는 방법을 한 줄씩 설명합니다."
+  },
+  {
+    "file": "개발/코드해설/15-build-js-빌드스크립트.md",
+    "title": "\"[코드 해설 15] build.js — posts.json을 자동으로 만드는 빌드 스크립트\"",
+    "date": "2026-06-02",
+    "category": "개발/코드해설",
+    "tags": [
+      "Node.js",
+      "빌드",
+      "자동화"
+    ],
+    "excerpt": "새 글을 쓴 후 node build.js를 실행하면 posts.json, sitemap.xml, config.js가 자동 생성됩니다. Node.js 파일 시스템 API와 재귀 탐색을 한 줄씩 설명합니다."
+  },
+  {
     "file": "PC/언어/c-basics.md",
     "title": "C 언어 기초",
     "date": "2026-06-01",
