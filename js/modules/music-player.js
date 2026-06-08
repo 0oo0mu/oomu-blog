@@ -296,8 +296,9 @@ const MusicPlayer = {
     this.currentIndex = ((index % this.playlist.length) + this.playlist.length) % this.playlist.length;
     const track = this.playlist[this.currentIndex];
 
-    // src 경로 처리: 외부 URL이면 그대로, 로컬 파일이면 'music/' 접두사 추가
-    const src = track.src.startsWith('http') ? track.src : `music/${track.src}`;
+    // src 경로 처리: 외부 URL이면 그대로, 로컬 파일이면 경로 그대로 사용
+    const rawSrc = track.file || track.src || '';
+    const src = rawSrc.startsWith('http') ? rawSrc : rawSrc;
     this.audio.src = src;
     this.audio.load();
 
