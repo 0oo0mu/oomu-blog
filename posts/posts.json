@@ -191,6 +191,22 @@
     "excerpt": "새 글을 쓴 후 node build.js를 실행하면 posts.json, sitemap.xml, config.js가 자동 생성됩니다. Node.js 파일 시스템 API와 재귀 탐색을 한 줄씩 설명합니다."
   },
   {
+    "file": "게임/마인크래프트/11.md",
+    "title": "11",
+    "date": "",
+    "category": "게임/마인크래프트",
+    "tags": [],
+    "excerpt": ""
+  },
+  {
+    "file": "게임/원스휴먼/11.md",
+    "title": "11",
+    "date": "",
+    "category": "게임/원스휴먼",
+    "tags": [],
+    "excerpt": ""
+  },
+  {
     "file": "언어/c-basics.md",
     "title": "C 언어 기초",
     "date": "2026-06-01",
