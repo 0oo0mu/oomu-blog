@@ -1,0 +1,56 @@
+/* =============================================
+   css/variables.css — CSS 디자인 토큰 (변수)
+
+   모든 색상, 크기, 폰트를 여기서 관리합니다.
+   새 테마를 추가하려면 이 파일만 수정하세요.
+   ============================================= */
+
+/* ── 라이트 모드 기본값 ── */
+:root {
+  /* 포인트 컬러 (JS에서 --accent를 바꾸면 전체 반영) */
+  --accent:       #6366f1;
+  --accent-light: rgba(99, 102, 241, 0.12);
+
+  /* 배경 */
+  --bg:           #ffffff;
+  --bg-card:      #f8fafc;
+  --bg-code:      #f1f5f9;
+
+  /* 텍스트 */
+  --text:         #1e293b;
+  --text-muted:   #64748b;
+  --text-heading: #0f172a;
+
+  /* 구분선 / 그림자 */
+  --border:       #e2e8f0;
+  --shadow:       0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+
+  /* 레이아웃 */
+  --sidebar-left:   220px;  /* 왼쪽 카테고리 사이드바 (index + post 공통) */
+  --sidebar-width:  240px;  /* 오른쪽 ToC 사이드바 */
+  --header-height:  60px;
+  --layout-padding: 2rem;   /* 페이지 좌우 패딩 (양쪽 동일하게 유지해야 흔들리지 않음) */
+
+  /* 폰트 */
+  --font:      'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-code: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+  /* 트랜지션 */
+  --transition: 0.2s ease;
+}
+
+/* ── 다크 모드 ──
+   :root.dark 를 사용합니다.
+   인라인 스크립트가 CSS 로드 전에 <html>에 dark 클래스를 붙이기 때문에
+   body.dark 대신 :root.dark 를 씁니다. (섬광 방지) */
+:root.dark {
+  --bg:           #0f172a;
+  --bg-card:      #1e293b;
+  --bg-code:      #0d1526;
+  --text:         #e2e8f0;
+  --text-muted:   #94a3b8;
+  --text-heading: #f1f5f9;
+  --border:       #334155;
+  --shadow:       0 1px 3px rgba(0,0,0,0.4);
+  --accent-light: rgba(99, 102, 241, 0.15);
+}

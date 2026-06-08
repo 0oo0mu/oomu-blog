@@ -1,0 +1,250 @@
+/* ════════════════════════════════════════════════════════
+   css/graph.css — 연결 그래프 오버레이 스타일
+   ════════════════════════════════════════════════════════ */
+
+/* ── CSS 변수 ── */
+:root {
+  --graph-post:     #94a3b8;
+  --graph-cat:      var(--accent);
+  --graph-link-cat: var(--border);
+  --graph-bg:       var(--bg);
+  --graph-label:    var(--text-muted);
+}
+:root.dark {
+  --graph-post:  #64748b;
+  --graph-label: rgba(255,255,255,0.55);
+}
+
+/* ════════════════════════════════════
+   오버레이 전체
+   ════════════════════════════════════ */
+#graphOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: var(--graph-bg);
+  display: flex;
+  flex-direction: column;
+
+  /* 숨김 상태 */
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+#graphOverlay.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1);
+}
+
+/* ════════════════════════════════════
+   상단 바
+   ════════════════════════════════════ */
+.graph-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+}
+
+.graph-topbar-left,
+.graph-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.graph-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* 범례 */
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.legend-item svg {
+  flex-shrink: 0;
+}
+
+/* 힌트 텍스트 */
+.graph-hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* 닫기 버튼 */
+.graph-close-btn {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.graph-close-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ════════════════════════════════════
+   캔버스 영역
+   ════════════════════════════════════ */
+.graph-canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#graphSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ════════════════════════════════════
+   SVG 내부 요소 (D3)
+   ════════════════════════════════════ */
+
+/* 링크 선 */
+.graph-link {
+  fill: none;
+  stroke-linecap: round;
+}
+.graph-link-cat {
+  stroke: var(--graph-link-cat);
+  stroke-width: 1.2px;
+}
+
+/* 노드 공통 */
+.g-node { transition: opacity 0.2s; }
+.g-node:hover .node-label { opacity: 1; }
+
+/* 포스트 노드 원 */
+.g-node-post .node-shape {
+  fill: var(--graph-post);
+  transition: fill 0.2s, r 0.3s;
+}
+.g-node-post:hover .node-shape {
+  fill: var(--accent);
+}
+
+/* 현재 포스트 */
+.g-node-current .node-shape {
+  fill: var(--accent) !important;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+/* 글로우 링 (현재 포스트) */
+.node-glow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5px;
+  opacity: 0;
+  animation: graph-glow 2.4s ease-in-out infinite;
+}
+@keyframes graph-glow {
+  0%,100% { opacity: 0.2; stroke-width: 2.5px; }
+  50%      { opacity: 0.7; stroke-width: 4px;   }
+}
+
+/* 카테고리 노드 사각형 */
+.g-node-category .node-shape {
+  fill: var(--accent-light);
+  stroke: var(--accent);
+  stroke-width: 2px;
+}
+.g-node-category:hover .node-shape {
+  fill: var(--accent);
+}
+
+
+/* 라벨 */
+.node-label {
+  font-size: 10px;
+  fill: var(--graph-label);
+  pointer-events: none;
+  user-select: none;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.g-node-category .node-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.g-node-current .node-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--accent);
+}
+
+/* ════════════════════════════════════
+   툴팁
+   ════════════════════════════════════ */
+.graph-tooltip {
+  position: fixed;
+  display: none;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ════════════════════════════════════
+   헤더 버튼 활성 상태
+   ════════════════════════════════════ */
+#graphBtn.active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* ════════════════════════════════════
+   반응형: 모바일에서 힌트 숨김
+   ════════════════════════════════════ */
+@media (max-width: 640px) {
+  .graph-hint { display: none; }
+  .graph-legend { display: none; }
+  .graph-topbar { padding: 0.6rem 1rem; }
+  #graphBtn span:last-child { display: none; }
+}

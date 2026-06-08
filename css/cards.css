@@ -1,0 +1,99 @@
+/* =============================================
+   css/cards.css — 포스트 카드 & 그리드
+
+   메인 페이지의 포스트 목록 카드 스타일입니다.
+   카드에 이미지 썸네일 등을 추가하려면
+   이 파일을 수정하세요.
+   ============================================= */
+
+/* 카드들이 배치되는 그리드 컨테이너 */
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* 개별 포스트 카드 */
+.post-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  cursor: pointer;
+}
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent);
+  opacity: 1; /* a:hover의 opacity 오버라이드 */
+}
+
+/* 카테고리 배지 */
+.post-category {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+/* 카드 제목 */
+.post-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+
+/* 요약 (최대 3줄) */
+.post-card-excerpt {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1; /* 가변 영역을 채워서 날짜/태그를 카드 하단에 고정 */
+}
+
+/* 카드 하단 메타 (날짜 + 태그) */
+.post-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.post-date {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* 태그 목록 */
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.post-tag {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.12rem 0.5rem;
+  border-radius: 4px;
+}

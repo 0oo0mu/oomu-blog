@@ -1,0 +1,139 @@
+/* =============================================
+   css/header.css — 상단 헤더 & 네비게이션
+   ============================================= */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-height);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* 블로그 타이틀 */
+.site-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.site-title span { color: var(--accent); }
+
+/* 헤더 우측 컨트롤 묶음 */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ══════════════════════════════════════════
+   공통 헤더 컨트롤 버튼 (필 스타일)
+   글쓰기(.theme-toggle<a>), 색상(.color-picker-wrap), 다크(.theme-toggle<button>)
+   세 가지가 모두 동일한 height: 32px 필 모양을 갖습니다.
+   ══════════════════════════════════════════ */
+
+/* ─ 글쓰기 & 다크 버튼 (공통) ─ */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;  /* <a> 태그용 */
+  cursor: pointer;
+  flex-shrink: 0;
+  /* 브라우저 button 기본 스타일 제거 */
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color var(--transition), color var(--transition),
+              background var(--transition);
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* ── 색상 프리셋 래퍼 (버튼 + 팝업을 감싸는 컨테이너) ── */
+.color-preset-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 현재 색상을 나타내는 원형 점 */
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent); /* CSS 변수 직접 참조 → 색 바뀌면 자동 반영 */
+  flex-shrink: 0;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  transition: background var(--transition);
+}
+body.dark .color-dot { border-color: rgba(255,255,255,0.15); }
+
+/* ── 프리셋 팝업 (버튼 클릭 시 버튼 아래에 표시) ── */
+.color-preset-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+
+  display: none; /* 기본 숨김, .open 클래스로 표시 */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+  min-width: 144px;
+}
+.color-preset-popup.open { display: grid; }
+
+/* 개별 색상 스와치 버튼 */
+.preset-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.preset-swatch:hover { transform: scale(1.18); }
+
+/* 현재 선택된 스와치: 흰 내부 테두리 + 외곽 링 */
+.preset-swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2.5px var(--accent);
+  transform: scale(1.1);
+}

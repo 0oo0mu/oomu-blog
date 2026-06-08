@@ -1,0 +1,15 @@
+{
+  "_comment": "블로그 설정 파일. 배포 전에 siteUrl을 실제 주소로 바꾸세요.",
+
+  "siteName": "My Blog",
+  "siteUrl": "https://yourblog.com",
+  "description": "개발과 일상을 기록하는 블로그",
+  "author": "작성자 이름",
+  "language": "ko",
+
+  "social": {
+    "github": "",
+    "twitter": "",
+    "email": ""
+  }
+}

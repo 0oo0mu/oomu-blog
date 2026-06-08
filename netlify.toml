@@ -1,0 +1,30 @@
+# netlify.toml — Netlify 배포 설정
+#
+# Netlify에 연결하면 자동으로 이 파일을 읽어서 빌드합니다.
+# 별도 설정 없이 GitHub 저장소만 연결하면 됩니다.
+
+[build]
+  # 빌드 명령어: posts.json, sitemap.xml, robots.txt, config.js 자동 생성
+  command = "node build.js"
+  # 배포할 폴더: 루트 전체
+  publish = "."
+
+# 모든 경로를 index.html로 리다이렉트 (현재는 불필요하지만 향후 확장용)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
+
+# 보안 헤더
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# 마크다운 파일 직접 접근 차단 (API로만 접근)
+[[headers]]
+  for = "/posts/*.md"
+  [headers.values]
+    X-Robots-Tag = "noindex"

@@ -1,0 +1,16 @@
+{
+  "comment": "Vercel 배포 설정. GitHub 저장소를 Vercel에 연결하면 자동으로 읽힙니다.",
+  "buildCommand": "node build.js",
+  "outputDirectory": ".",
+  "installCommand": "echo 'no install needed'",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

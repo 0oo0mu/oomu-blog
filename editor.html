@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>글 작성 — My Blog</title>
+  <!-- 섬광 방지: CSS 로드 전에 다크모드 + 프리셋 컬러 즉시 적용 -->
+  <script>
+    (function () {
+      var P=[{a:'#6366f1',l:'rgba(99,102,241,0.13)'},{a:'#3b82f6',l:'rgba(59,130,246,0.13)'},{a:'#10b981',l:'rgba(16,185,129,0.13)'},{a:'#06b6d4',l:'rgba(6,182,212,0.13)'},{a:'#8b5cf6',l:'rgba(139,92,246,0.13)'},{a:'#ec4899',l:'rgba(236,72,153,0.13)'},{a:'#f43f5e',l:'rgba(244,63,94,0.13)'},{a:'#f97316',l:'rgba(249,115,22,0.13)'}];
+      try {
+        if (JSON.parse(localStorage.getItem('theme'))==='dark') document.documentElement.classList.add('dark');
+        var i=parseInt(localStorage.getItem('accent_preset'),10), p=P[isNaN(i)?0:Math.min(Math.max(i,0),P.length-1)];
+        document.documentElement.style.setProperty('--accent',p.a);
+        document.documentElement.style.setProperty('--accent-light',p.l);
+      } catch(e) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/header.css" />
+  <link rel="stylesheet" href="css/cards.css" />    <!-- .post-category, .post-tag 공유 -->
+  <link rel="stylesheet" href="css/post.css" />     <!-- .post-body 마크다운 스타일 공유 -->
+  <link rel="stylesheet" href="css/editor.css" />   <!-- 에디터 전용 스타일 -->
+
+  <!-- marked.js: 실시간 미리보기용 마크다운 파서 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+
+  <!-- 에디터 페이지는 body가 전체 높이를 차지해야 합니다 -->
+  <style>
+    body { overflow: hidden; } /* 페이지 자체는 스크롤 안 함, 패널이 각자 스크롤 */
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════
+       헤더
+       ══════════════════════════════════ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-title">My<span>Blog</span></a>
+      <div class="header-controls">
+        <div class="color-preset-wrap" id="colorPresetWrap">
+          <button class="theme-toggle" id="colorPresetBtn" aria-expanded="false" aria-label="테마 색상 변경">
+            <span class="color-dot" id="colorDot"></span>
+            <span>색상</span>
+          </button>
+          <div class="color-preset-popup" id="colorPresetPopup"></div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" aria-label="테마 전환">
+          <span id="themeIcon">🌙</span>
+          <span id="themeLabel">다크</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════
+       에디터 전체 영역
+       ══════════════════════════════════ -->
+  <div class="editor-page">
+
+    <!-- 상단 툴바: 파일명 입력 + 액션 버튼들 -->
+    <div class="editor-toolbar">
+      <div class="editor-toolbar-left">
+        <!-- 목록으로 돌아가기 -->
+        <a href="index.html" class="toolbar-btn">← 목록</a>
+
+        <!-- 파일 경로 입력 (posts/ 기준 상대 경로) -->
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <span style="font-size:0.82rem;color:var(--text-muted);font-family:var(--font-code)">posts/</span>
+          <input
+            type="text"
+            id="filenameInput"
+            class="filename-input"
+            placeholder="폴더/파일명.md  (예: 개발/javascript/hello.md)"
+          />
+        </div>
+      </div>
+
+      <div class="editor-toolbar-right">
+        <!-- 새 글 -->
+        <button class="toolbar-btn" id="newBtn">＋ 새 글</button>
+        <!-- 로컬 저장 (File System Access API) -->
+        <button class="toolbar-btn" id="saveBtn">💾 로컬 저장</button>
+        <!-- GitHub 게시 -->
+        <button class="toolbar-btn primary" id="publishBtn">🚀 GitHub에 게시</button>
+        <!-- GitHub 설정 -->
+        <div style="position:relative">
+          <button class="toolbar-btn" id="ghSettingsBtn" title="GitHub 설정">⚙️</button>
+
+          <!-- GitHub 설정 드롭다운 패널 -->
+          <div class="gh-settings-panel" id="ghSettingsPanel">
+            <p class="gh-settings-title">⚙️ 설정</p>
+            <p class="gh-settings-desc">
+              한 번만 입력하면 이후 자동 저장됩니다.<br>
+              모든 값은 이 브라우저에만 저장됩니다.
+            </p>
+
+            <div class="gh-section-label">🐙 GitHub</div>
+
+            <label class="gh-label">
+              GitHub Token
+              <a href="https://github.com/settings/tokens/new?scopes=repo&description=Blog+Editor"
+                 target="_blank" class="gh-token-link">발급받기 →</a>
+            </label>
+            <input type="password" id="gh_token" class="gh-input"
+                   placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+
+            <label class="gh-label">GitHub 아이디 (owner)</label>
+            <input type="text" id="gh_owner" class="gh-input" placeholder="내아이디" />
+
+            <label class="gh-label">저장소 이름 (repo)</label>
+            <input type="text" id="gh_repo" class="gh-input" placeholder="blog" />
+
+            <label class="gh-label">브랜치</label>
+            <input type="text" id="gh_branch" class="gh-input" placeholder="main" value="main" />
+
+            <button class="gh-save-btn" id="ghSaveSettingsBtn">저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 좌우 분할 패널 -->
+    <div class="editor-panels">
+
+      <!-- ══ 왼쪽: 에디터 패널 ══ -->
+      <div class="editor-left">
+
+        <!-- Front Matter 폼 -->
+        <div class="frontmatter-form">
+          <!-- 제목 (전체 너비) -->
+          <div class="full-width">
+            <label class="fm-label" for="fmTitle">제목</label>
+            <input type="text" id="fmTitle" class="fm-input" placeholder="글 제목을 입력하세요" />
+          </div>
+
+          <!-- 날짜 -->
+          <div>
+            <label class="fm-label" for="fmDate">날짜</label>
+            <input type="date" id="fmDate" class="fm-input" />
+          </div>
+
+          <!-- 카테고리 -->
+          <div>
+            <label class="fm-label" for="fmCategory">카테고리</label>
+            <input type="text" id="fmCategory" class="fm-input" placeholder="예: 개발/javascript" />
+          </div>
+
+          <!-- 태그 (전체 너비) -->
+          <div class="full-width">
+            <label class="fm-label" for="fmTags">태그 (쉼표로 구분)</label>
+            <input type="text" id="fmTags" class="fm-input" placeholder="예: JavaScript, 입문, 튜토리얼" />
+          </div>
+
+          <!-- 요약 (전체 너비) -->
+          <div class="full-width">
+            <label class="fm-label" for="fmExcerpt">요약 <span style="font-weight:400;text-transform:none">(비우면 본문에서 자동 생성)</span></label>
+            <input type="text" id="fmExcerpt" class="fm-input" placeholder="목록 카드에 표시될 요약문" />
+          </div>
+        </div>
+
+        <!-- 서식 버튼 바 -->
+        <div class="editor-format-bar" id="formatBar">
+          <button class="fmt-btn" data-format="h2"        title="제목 2 (##)">H2</button>
+          <button class="fmt-btn" data-format="h3"        title="제목 3 (###)">H3</button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-format="bold"      title="굵게 (**텍스트**)"><strong>B</strong></button>
+          <button class="fmt-btn" data-format="italic"    title="기울임 (*텍스트*)"><em>I</em></button>
+          <button class="fmt-btn" data-format="strike"    title="취소선 (~~텍스트~~)"><s>S</s></button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-format="code"      title="인라인 코드 (`코드`)">` `</button>
+          <button class="fmt-btn" data-format="codeblock" title="코드 블록 (```코드```)">```</button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-format="link"      title="링크 ([텍스트](URL))">🔗</button>
+          <button class="fmt-btn" data-format="image"     title="이미지 (![설명](URL))">🖼️</button>
+          <div class="fmt-divider"></div>
+          <button class="fmt-btn" data-format="quote"     title="인용문 (> 텍스트)">&ldquo;&rdquo;</button>
+          <button class="fmt-btn" data-format="ul"        title="순서 없는 목록 (- 항목)">• 목록</button>
+          <button class="fmt-btn" data-format="ol"        title="순서 있는 목록 (1. 항목)">1. 목록</button>
+          <button class="fmt-btn" data-format="hr"        title="구분선 (---)">—</button>
+        </div>
+
+        <!-- 마크다운 입력 textarea -->
+        <textarea
+          id="editorTextarea"
+          class="editor-textarea"
+          placeholder="여기에 마크다운으로 글을 작성하세요...
+
+## 소제목
+본문 내용을 입력합니다.
+
+### 더 작은 제목
+- 목록 항목 1
+- 목록 항목 2
+
+\`\`\`javascript
+// 코드 블록
+const hello = 'world';
+\`\`\`"
+          spellcheck="false"
+        ></textarea>
+
+      </div>
+
+      <!-- ══ 오른쪽: 미리보기 패널 ══ -->
+      <div class="editor-right">
+        <div class="preview-header">📄 미리보기</div>
+
+        <div class="preview-body">
+          <!-- 포스트 헤더 미리보기 (제목, 날짜, 태그) -->
+          <div class="preview-post-header post-header" id="previewHeader">
+            <span style="color:var(--text-muted);font-size:0.9rem">Front Matter 정보가 여기에 표시됩니다</span>
+          </div>
+
+          <!-- 본문 미리보기 (마크다운 → HTML) -->
+          <div class="post-body" id="previewBody">
+            <div class="preview-empty">
+              <div class="icon">✏️</div>
+              <p>왼쪽에서 마크다운을 입력하면<br>여기에 미리보기가 표시됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module" src="js/app-editor.js"></script>
+
+</body>
+</html>

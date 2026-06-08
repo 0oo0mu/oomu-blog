@@ -1,0 +1,49 @@
+/* =============================================
+   css/base.css — 리셋 + 기본 요소 스타일
+
+   전역 리셋과 a, code, body 같은 기본 HTML
+   요소의 기본 스타일을 정의합니다.
+   ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth; /* 앵커 클릭 시 부드럽게 스크롤 */
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity var(--transition);
+}
+a:hover { opacity: 0.75; }
+
+/* 페이지 전체를 감싸는 컨테이너 */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* 빈 상태 표시 (포스트 없을 때 등) */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+  grid-column: 1 / -1; /* 그리드 전체 너비 차지 */
+}
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.empty-state p { font-size: 1.05rem; }

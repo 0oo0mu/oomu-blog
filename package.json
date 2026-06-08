@@ -1,0 +1,14 @@
+{
+  "name": "my-blog",
+  "version": "1.0.0",
+  "description": "정적 마크다운 블로그",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node server.js",
+    "predeploy": "node build.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

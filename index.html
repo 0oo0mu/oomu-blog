@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Blog</title>
+  <!-- 섬광 방지: CSS 로드 전에 다크모드 + 프리셋 컬러 즉시 적용 -->
+  <script>
+    (function () {
+      var P=[{a:'#6366f1',l:'rgba(99,102,241,0.13)'},{a:'#3b82f6',l:'rgba(59,130,246,0.13)'},{a:'#10b981',l:'rgba(16,185,129,0.13)'},{a:'#06b6d4',l:'rgba(6,182,212,0.13)'},{a:'#8b5cf6',l:'rgba(139,92,246,0.13)'},{a:'#ec4899',l:'rgba(236,72,153,0.13)'},{a:'#f43f5e',l:'rgba(244,63,94,0.13)'},{a:'#f97316',l:'rgba(249,115,22,0.13)'}];
+      try {
+        if (JSON.parse(localStorage.getItem('theme'))==='dark') document.documentElement.classList.add('dark');
+        var i=parseInt(localStorage.getItem('accent_preset'),10), p=P[isNaN(i)?0:Math.min(Math.max(i,0),P.length-1)];
+        document.documentElement.style.setProperty('--accent',p.a);
+        document.documentElement.style.setProperty('--accent-light',p.l);
+      } catch(e) {}
+    })();
+  </script>
+
+  <meta name="description" content="개발과 일상을 기록하는 블로그" />
+  <meta name="author" content="" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="My Blog" />
+  <meta property="og:description" content="개발과 일상을 기록하는 블로그" />
+  <meta property="og:url"         content="" />
+  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:title"       content="My Blog" />
+  <meta name="twitter:description" content="개발과 일상을 기록하는 블로그" />
+
+  <!-- CSS: 목록 + 포스트 뷰 모두 포함 (SPA이므로 둘 다 필요) -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/header.css" />
+  <link rel="stylesheet" href="css/filters.css" />
+  <link rel="stylesheet" href="css/cards.css" />
+  <link rel="stylesheet" href="css/sidebar.css" />
+  <link rel="stylesheet" href="css/search.css" />
+  <link rel="stylesheet" href="css/post.css" />     <!-- 포스트 뷰용 -->
+  <link rel="stylesheet" href="css/toc.css" />      <!-- ToC용 -->
+  <link rel="stylesheet" href="css/responsive.css" />
+  <link rel="stylesheet" href="css/music-player.css" />
+  <link rel="stylesheet" href="css/graph.css" />
+
+  <!-- marked.js: 포스트 뷰에서 마크다운 렌더링에 사용 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+
+  <!-- 뷰 전환 스타일 -->
+  <style>
+    /* SPA 뷰 전환: view-hidden 클래스로 표시/숨김 */
+    .view-hidden { display: none !important; }
+
+    /* 포스트 뷰 레이아웃: 본문(1fr) + ToC(240px) */
+    #postView {
+      display: grid;
+      grid-template-columns: 1fr var(--sidebar-width);
+      gap: 3rem;
+      align-items: start;
+    }
+    /* postView 숨겨질 때는 grid 해제 */
+    #postView.view-hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- 헤더 -->
+  <header class="site-header">
+    <div class="header-inner">
+      <!-- 로고 클릭 → 목록 뷰로 (SPA 라우터가 가로챔) -->
+      <a href="index.html" class="site-title" id="siteLogo">My<span>Blog</span></a>
+      <div class="header-controls">
+        <!-- 글쓰기 버튼 -->
+        <a href="editor.html" id="writeBtn" class="theme-toggle">✏️ 글쓰기</a>
+
+        <!-- 색상 프리셋 선택기 -->
+        <div class="color-preset-wrap" id="colorPresetWrap">
+          <button class="theme-toggle" id="colorPresetBtn" aria-expanded="false" aria-label="테마 색상 변경">
+            <span class="color-dot" id="colorDot"></span>
+            <span>색상</span>
+          </button>
+          <!-- JS(accent.js)가 채워주는 스와치 팝업 -->
+          <div class="color-preset-popup" id="colorPresetPopup"></div>
+        </div>
+
+        <!-- 다크/라이트 토글 버튼 -->
+        <button class="theme-toggle" id="themeToggle" aria-label="테마 전환">
+          <span id="themeIcon">🌙</span>
+          <span id="themeLabel">다크</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════
+       사이드바 + 메인 2열 레이아웃
+       사이드바는 SPA 전환 중에도 유지됩니다.
+       ══════════════════════════════════════════ -->
+  <div class="index-layout">
+
+    <!-- ── 왼쪽 사이드바 (항상 고정) ── -->
+    <aside class="category-sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle">
+        📂 카테고리
+        <span class="toggle-arrow" style="margin-left:auto">▼</span>
+      </button>
+      <div class="sidebar-content" id="sidebarContent">
+
+        <!-- 검색바 -->
+        <div class="sidebar-section">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input"
+              placeholder="검색... (단축키: /)" autocomplete="off" spellcheck="false" />
+            <button class="search-clear" id="searchClear" title="지우기">✕</button>
+          </div>
+        </div>
+
+        <!-- 카테고리 트리 -->
+        <div class="sidebar-section">
+          <p class="sidebar-label">카테고리</p>
+          <ul class="category-tree" id="categoryTree">
+            <li style="color:var(--text-muted);font-size:0.82rem;padding:.3rem .5rem">불러오는 중...</li>
+          </ul>
+        </div>
+
+        <!-- 태그 칩 -->
+        <div class="sidebar-section">
+          <p class="sidebar-label">태그</p>
+          <div class="filter-chips" id="tagChips"></div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ── 오른쪽 메인 영역 (뷰 전환 대상) ── -->
+    <main class="posts-main">
+
+      <!-- ══ 목록 뷰 (기본 표시) ══ -->
+      <div id="listView">
+        <p class="search-result-info" id="searchResultInfo"></p>
+        <div class="posts-grid" id="postsGrid">
+          <p style="color:var(--text-muted);padding:1rem">불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- ══ 포스트 뷰 (클릭 시 표시) ══ -->
+      <div id="postView" class="view-hidden">
+
+        <!-- 본문 영역 -->
+        <article>
+          <!-- 뒤로가기 버튼 (router.js가 클릭을 가로챔) -->
+          <a href="index.html" class="back-btn" id="backBtn">← 목록으로</a>
+
+          <!-- 포스트 헤더 (제목/날짜/카테고리) -->
+          <div class="post-header" id="postHeader"></div>
+
+          <!-- 마크다운 본문 -->
+          <div class="post-body" id="postBody"></div>
+        </article>
+
+        <!-- ToC 사이드바 -->
+        <aside class="toc-sidebar" id="tocSidebar">
+          <p class="toc-title">목차</p>
+          <ul class="toc-list" id="tocList"></ul>
+        </aside>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <script type="module" src="js/app-index.js"></script>
+
+</body>
+</html>

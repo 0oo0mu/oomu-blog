@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /posts/
+
+# Sitemap: (blog.config.json의 siteUrl을 설정하면 자동으로 추가됩니다)

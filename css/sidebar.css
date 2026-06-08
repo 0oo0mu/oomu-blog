@@ -1,0 +1,243 @@
+/* =============================================
+   css/sidebar.css — 왼쪽 카테고리 사이드바
+
+   ★ 레이아웃 통일 원칙 ★
+   index.html(.index-layout)과 post.html(.post-page-outer) 양쪽 모두
+   동일한 변수(--sidebar-left, --layout-padding)를 사용합니다.
+   이를 지키지 않으면 페이지 이동 시 사이드바 위치가 흔들립니다.
+   ============================================= */
+
+/* ══════════════════════════════════════════════
+   index.html 2열 레이아웃
+   (사이드바 | 포스트 목록)
+   ══════════════════════════════════════════════ */
+.index-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-left) 1fr; /* ← variables.css의 --sidebar-left 사용 */
+  gap: 1.5rem;
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--layout-padding); /* ← 양쪽 동일한 패딩 사용 */
+}
+
+/* ══════════════════════════════════════════════
+   사이드바 공통 (index + post 동일)
+   ══════════════════════════════════════════════ */
+.category-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + 1rem);
+  /* 전체 사이드바는 overflow 없이 자연스럽게 흐름 */
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 섹션 구분 */
+.sidebar-section {
+  padding-bottom: 1rem;
+}
+.sidebar-section + .sidebar-section {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+/* ══════════════════════════════════════════════
+   카테고리 트리 스크롤 래퍼
+   카테고리가 많아지면 이 영역만 독립적으로 스크롤됩니다.
+   검색바, 태그, 레이블 등은 스크롤 밖에 고정됩니다.
+   ══════════════════════════════════════════════ */
+.category-tree-wrap {
+  max-height: 380px;       /* 이 높이를 넘으면 스크롤 발생 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -0.25rem;      /* 스크롤바 공간 확보 */
+  padding: 0 0.25rem;
+  /* 스크롤 끝에서 부드럽게 페이드 처리 */
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+/* 완전히 스크롤됐을 때는 페이드 제거 */
+.category-tree-wrap.scrolled-end {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* 스크롤바 스타일 */
+.category-tree-wrap::-webkit-scrollbar { width: 4px; }
+.category-tree-wrap::-webkit-scrollbar-track { background: transparent; }
+.category-tree-wrap::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+.category-tree-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* ══════════════════════════════════════════════
+   카테고리 트리 항목
+   ══════════════════════════════════════════════ */
+.category-tree {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 트리 항목 버튼 */
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.32rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+  border-left: 2px solid transparent;
+}
+.tree-item:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.tree-item.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ▶ 화살표 (펼치기/접기 상태 표시) */
+.tree-arrow {
+  font-size: 0.6rem;
+  transition: transform var(--transition);
+  flex-shrink: 0;
+  color: var(--text-muted);
+  width: 10px;
+}
+.tree-node.open > .tree-item .tree-arrow {
+  transform: rotate(90deg);
+}
+
+/* 카테고리 이름 */
+.tree-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 포스트 수 배지 */
+.tree-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.tree-item.active .tree-count,
+.tree-item:hover .tree-count {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* 하위 트리 (자식 ul) */
+.tree-children {
+  list-style: none;
+  margin-left: 0.6rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+}
+.tree-node.open > .tree-children {
+  display: flex;
+}
+
+/* 전체 보기 항목 */
+.tree-item-all {
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+
+/* ══════════════════════════════════════════════
+   모바일 토글 버튼
+   ══════════════════════════════════════════════ */
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font);
+  cursor: pointer;
+  width: 100%;
+  transition: all var(--transition);
+}
+.sidebar-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══════════════════════════════════════════════
+   사이드바 내부 컨텐츠 래퍼
+   (데스크탑: 항상 보임 / 모바일: 토글로 열림)
+   ══════════════════════════════════════════════ */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ══════════════════════════════════════════════
+   반응형
+   ══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .index-layout {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    gap: 0;
+  }
+
+  .category-sidebar {
+    position: static;
+  }
+
+  .sidebar-content {
+    display: none; /* 기본 숨김 */
+    margin-top: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-card);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .sidebar-content.open { display: flex; }
+
+  .sidebar-toggle { display: flex; }
+
+  /* 모바일에서 트리 스크롤 높이 조정 */
+  .category-tree-wrap { max-height: 260px; }
+}
