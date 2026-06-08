@@ -26,6 +26,7 @@ const Filter = {
     category: 'all', // 선택된 카테고리 경로 또는 'all'
     tag:      'all', // 선택된 태그 또는 'all'
     query:    '',    // 검색어 (빈 문자열이면 전체)
+    sort:     'newest', // 정렬 순서: 'newest' | 'oldest' | 'title'
   },
 
   _allPosts: [],
@@ -38,6 +39,7 @@ const Filter = {
     App.on('posts:loaded', ({ posts }) => {
       this._allPosts = posts;
       this._renderTagChips();
+      this._bindSortBtns();
       this._applyFilter();
     });
 
@@ -109,13 +111,29 @@ const Filter = {
   },
 
   /**
+   * 정렬 버튼을 바인딩합니다.
+   */
+  _bindSortBtns() {
+    const bar = document.getElementById('sortBar');
+    if (!bar) return;
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sort-btn');
+      if (!btn) return;
+      bar.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      this.state.sort = btn.dataset.sort;
+      this._applyFilter();
+    });
+  },
+
+  /**
    * 현재 필터 상태(카테고리 + 태그 + 검색어)로 포스트를 걸러냅니다.
    * 세 조건을 모두 AND로 적용합니다.
    */
   _applyFilter() {
-    const { category, tag, query } = this.state;
+    const { category, tag, query, sort } = this.state;
 
-    const filtered = this._allPosts.filter(post => {
+    let filtered = this._allPosts.filter(post => {
       // ── 카테고리 필터 (계층 포함) ──
       let catOk;
       if (category === 'all') {
@@ -133,6 +151,14 @@ const Filter = {
 
       return catOk && tagOk && searchOk;
     });
+
+    // ── 정렬 ──
+    if (sort === 'oldest') {
+      filtered = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (sort === 'title') {
+      filtered = [...filtered].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+    }
+    // 'newest'는 posts.json이 이미 최신순이므로 그대로
 
     // 결과 수 업데이트
     this._updateResultInfo(filtered.length);

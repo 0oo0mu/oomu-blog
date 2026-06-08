@@ -138,7 +138,7 @@ const Sidebar = {
     btn.dataset.category = fullPath;
     btn.innerHTML = `
       ${hasChildren ? `<span class="tree-arrow">▶</span>` : `<span class="tree-arrow" style="opacity:0">▶</span>`}
-      <span class="tree-name">${hasChildren ? '📁' : '📄'} ${name}</span>
+      <span class="tree-name">📁 ${name}</span>
       <span class="tree-count">${node._total}</span>
     `;
 
