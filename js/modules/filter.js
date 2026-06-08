@@ -153,12 +153,28 @@ const Filter = {
     });
 
     // ── 정렬 ──
-    if (sort === 'oldest') {
-      filtered = [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
+    // 날짜 없는 포스트는 최신순 맨 뒤, 오래된순 맨 앞으로 처리
+    const dateVal = (post, isNewest) => {
+      const d = post.date ? new Date(post.date).getTime() : NaN;
+      if (isNaN(d)) return isNewest ? -Infinity : Infinity;
+      return d;
+    };
+
+    if (sort === 'newest') {
+      filtered = [...filtered].sort((a, b) => {
+        const diff = dateVal(b, true) - dateVal(a, true);
+        if (diff !== 0) return diff;
+        return (a.file || '').localeCompare(b.file || ''); // 날짜 같으면 파일명 순
+      });
+    } else if (sort === 'oldest') {
+      filtered = [...filtered].sort((a, b) => {
+        const diff = dateVal(a, false) - dateVal(b, false);
+        if (diff !== 0) return diff;
+        return (b.file || '').localeCompare(a.file || ''); // 날짜 같으면 파일명 역순
+      });
     } else if (sort === 'title') {
       filtered = [...filtered].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
     }
-    // 'newest'는 posts.json이 이미 최신순이므로 그대로
 
     // 결과 수 업데이트
     this._updateResultInfo(filtered.length);
