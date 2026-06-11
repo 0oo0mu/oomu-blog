@@ -164,7 +164,7 @@
   text-underline-offset: 2px;
 }
 
-/* 표 */
+/* 표 — 래퍼로 가로 스크롤 지원 */
 .post-body table {
   width: 100%;
   border-collapse: collapse;
@@ -181,4 +181,14 @@
   background: var(--bg-card);
   font-weight: 600;
   color: var(--text-heading);
+}
+
+/* 인라인 코드 — 긴 코드가 화면 밖으로 삐져나가지 않도록 */
+.post-body code {
+  word-break: break-all;
+}
+
+/* pre 안의 code는 줄바꿈 그대로 유지 */
+.post-body pre code {
+  word-break: normal;
 }
