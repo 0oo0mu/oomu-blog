@@ -180,9 +180,36 @@ const Graph = {
       }, '');
     });
 
+    // 카테고리별 총 포스트 수 (자기 자신 + 모든 하위 카테고리 포함)
+    // 예: '개발'은 '개발/코드해설'의 글까지 합산됨
+    const catPostCount = {};
+    catSet.forEach(cat => { catPostCount[cat] = 0; });
+    posts.forEach(p => {
+      if (!p.category) return;
+      let cur = '';
+      p.category.split('/').forEach(part => {
+        cur = cur ? `${cur}/${part}` : part;
+        if (catPostCount[cur] !== undefined) catPostCount[cur]++;
+      });
+    });
+
     catSet.forEach(cat => {
       const parts = cat.split('/');
-      add({ id: `cat:${cat}`, type: 'category', label: parts[parts.length - 1], r: 13, isCurrent: false });
+      const depth = parts.length;            // 1 = 최상위 폴더
+      const count = catPostCount[cat] || 0;  // 하위 포함 총 글 수
+
+      // 크기 = 기본값 + 깊이 보너스(상위일수록 큼) + 글 수 보너스(많을수록 큼)
+      const depthBonus = Math.max(0, 4 - depth) * 4;   // depth1:+12, depth2:+8, depth3:+4, depth4+:+0
+      const countBonus = Math.sqrt(count) * 2.5;
+      const r = Math.round(10 + depthBonus + countBonus);
+
+      add({
+        id: `cat:${cat}`,
+        type: 'category',
+        label: parts[parts.length - 1],
+        r, depth, count,
+        isCurrent: false,
+      });
     });
 
     // 부모 카테고리 → 자식 카테고리 링크
@@ -274,6 +301,7 @@ const Graph = {
       .attr('r', d => d.r + 8);
 
     // ── 카테고리 노드: 둥근 사각형 ──
+    // 상위 폴더(depth가 작을수록)는 테두리도 더 굵게 그려서 위계를 한 번 더 강조합니다.
     nodeSel.filter(d => d.type === 'category')
       .append('rect')
       .attr('class', 'node-shape')
@@ -281,7 +309,8 @@ const Graph = {
       .attr('height', d => d.r * 2.2)
       .attr('x', d => -d.r * 1.1)
       .attr('y', d => -d.r * 1.1)
-      .attr('rx', 4);
+      .attr('rx', 4)
+      .style('stroke-width', d => `${Math.max(1.2, 2.6 - (d.depth - 1) * 0.5)}px`);
 
     // ── 포스트·태그 노드: 원 ──
     nodeSel.filter(d => d.type !== 'category')
@@ -290,10 +319,19 @@ const Graph = {
       .attr('r', d => d.r);
 
     // ── 라벨 ──
+    // 카테고리는 깊이가 얕을수록(상위 폴더) 글자도 더 크게 표시해 위계를 강조합니다.
     nodeSel.append('text')
       .attr('class', 'node-label')
       .attr('dy', d => d.r + 13)
       .attr('text-anchor', 'middle')
+      .style('font-size', d => {
+        if (d.type !== 'category') return null;
+        return `${Math.max(10, 13 - (d.depth - 1))}px`;
+      })
+      .style('font-weight', d => {
+        if (d.type !== 'category') return null;
+        return d.depth === 1 ? 700 : 600;
+      })
       .text(d => {
         // 카테고리·현재 글·태그는 항상 표시
         if (d.type === 'category' || d.type === 'tag' || d.isCurrent) return d.label;
@@ -314,7 +352,10 @@ const Graph = {
     const tooltip = document.getElementById('graphTooltip');
     nodeSel
       .on('mouseenter', (ev, d) => {
-        tooltip.textContent = d.label;
+        // 카테고리는 포함된 글 수를 함께 보여줍니다.
+        tooltip.textContent = d.type === 'category'
+          ? `${d.label} (${d.count}개)`
+          : d.label;
         tooltip.style.display = 'block';
         this._moveTooltip(ev);
       })
@@ -330,7 +371,8 @@ const Graph = {
           .strength(0.7)
       )
       .force('charge', d3.forceManyBody().strength(d => {
-        if (d.type === 'category') return -350;
+        // 카테고리는 크기(r)에 비례해서 더 강하게 밀어내, 큰 노드 주변에 자연스러운 여유 공간이 생깁니다.
+        if (d.type === 'category') return -180 - d.r * 12;
         if (d.isCurrent)          return -280;
         return -120;
       }))
