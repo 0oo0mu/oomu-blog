@@ -199,9 +199,10 @@ const Graph = {
       const count = catPostCount[cat] || 0;  // 하위 포함 총 글 수
 
       // 크기 = 기본값 + 깊이 보너스(상위일수록 큼) + 글 수 보너스(많을수록 큼)
-      const depthBonus = Math.max(0, 4 - depth) * 4;   // depth1:+12, depth2:+8, depth3:+4, depth4+:+0
-      const countBonus = Math.sqrt(count) * 2.5;
-      const r = Math.round(10 + depthBonus + countBonus);
+      // 전체적으로 차분하게: 보너스 폭을 줄이고 최대 크기를 제한합니다.
+      const depthBonus = Math.max(0, 3 - depth) * 2;   // depth1:+4, depth2:+2, depth3+:+0
+      const countBonus = Math.sqrt(count) * 1.4;
+      const r = Math.min(20, Math.round(8 + depthBonus + countBonus));
 
       add({
         id: `cat:${cat}`,
@@ -224,12 +225,12 @@ const Graph = {
     // ── 포스트 노드 & 카테고리 링크 ──
     posts.forEach(p => {
       const isCurrent = (p.file === this._currentFile);
-      const baseR     = isCurrent ? 20 : 8;
+      const baseR     = isCurrent ? 14 : 7;
 
       add({ id: `post:${p.file}`, type: 'post', label: p.title || p.file, file: p.file, r: baseR, isCurrent });
 
       if (p.category && byId[`cat:${p.category}`]) {
-        links.push({ source: `cat:${p.category}`, target: `post:${p.file}`, ltype: 'cat', dist: 80 });
+        links.push({ source: `cat:${p.category}`, target: `post:${p.file}`, ltype: 'cat', dist: 55 });
       }
     });
 
@@ -298,17 +299,17 @@ const Graph = {
     nodeSel.filter(d => d.isCurrent)
       .append('circle')
       .attr('class', 'node-glow')
-      .attr('r', d => d.r + 8);
+      .attr('r', d => d.r + 5);
 
     // ── 카테고리 노드: 둥근 사각형 ──
     // 상위 폴더(depth가 작을수록)는 테두리도 더 굵게 그려서 위계를 한 번 더 강조합니다.
     nodeSel.filter(d => d.type === 'category')
       .append('rect')
       .attr('class', 'node-shape')
-      .attr('width',  d => d.r * 2.2)
-      .attr('height', d => d.r * 2.2)
-      .attr('x', d => -d.r * 1.1)
-      .attr('y', d => -d.r * 1.1)
+      .attr('width',  d => d.r * 1.9)
+      .attr('height', d => d.r * 1.9)
+      .attr('x', d => -d.r * 0.95)
+      .attr('y', d => -d.r * 0.95)
       .attr('rx', 4)
       .style('stroke-width', d => `${Math.max(1.2, 2.6 - (d.depth - 1) * 0.5)}px`);
 
@@ -367,13 +368,13 @@ const Graph = {
       .force('link',
         d3.forceLink(links)
           .id(d => d.id)
-          .distance(d => d.dist || 80)
+          .distance(d => d.dist || 60)
           .strength(0.7)
       )
       .force('charge', d3.forceManyBody().strength(d => {
         // 카테고리는 크기(r)에 비례해서 더 강하게 밀어내, 큰 노드 주변에 자연스러운 여유 공간이 생깁니다.
-        if (d.type === 'category') return -180 - d.r * 12;
-        if (d.isCurrent)          return -280;
+        if (d.type === 'category') return -90 - d.r * 7;
+        if (d.isCurrent)          return -160;
         return -120;
       }))
       .force('collision', d3.forceCollide(d => d.r + 6))
