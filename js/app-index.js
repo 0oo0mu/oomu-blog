@@ -55,9 +55,6 @@ App.register('renderer', Renderer);
 App.register('music',    MusicPlayer);
 App.register('graph',    Graph);
 
-// ── 라우터 초기화 (반드시 모듈 등록 후에) ──
-Router.init();
-
 // ══════════════════════════════════════════════════════════
 // 포스트 뷰 처리: router:post 이벤트 수신 → 마크다운 렌더링
 // ══════════════════════════════════════════════════════════
@@ -157,6 +154,9 @@ App.on('router:post', async ({ file }) => {
 App.on('router:list', () => {
   document.title = Config.siteName || 'My Blog';
 });
+
+// ── 라우터 초기화 (App.on 등록 후에 해야 F5 새로고침 시 이벤트가 전달됨) ──
+Router.init();
 
 // ══════════════════════════════════════════════════════════
 // 포스트 데이터 로드 + URL 파라미터 복원
