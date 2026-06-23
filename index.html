@@ -58,7 +58,19 @@
     }
     /* postView 숨겨질 때는 grid 해제 */
     #postView.view-hidden { display: none !important; }
+
+    /* grid child가 코드블록/테이블로 인해 overflow되지 않도록 */
+    #postView > * { min-width: 0; }
+
+    /* F5 새로고침 시 ?file= 있으면 listView 즉시 숨김 */
+    html.is-post-view #listView { display: none !important; }
   </style>
+  <!-- F5 새로고침 깜빡임 방지: ?file= 파라미터 감지 즉시 처리 -->
+  <script>
+    if (location.search.includes('file=')) {
+      document.documentElement.classList.add('is-post-view');
+    }
+  </script>
 </head>
 <body>
 
