@@ -34,6 +34,8 @@
   gap: 3rem;
   align-items: start;
 }
+/* grid child가 넘치지 않도록 */
+.post-layout > * { min-width: 0; }
 
 /* 뒤로가기 버튼 */
 .back-btn {
@@ -164,12 +166,15 @@
   text-underline-offset: 2px;
 }
 
-/* 표 — 래퍼로 가로 스크롤 지원 */
+/* 표 — 가로 스크롤 지원 (모든 화면 크기) */
 .post-body table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .post-body th,
 .post-body td {

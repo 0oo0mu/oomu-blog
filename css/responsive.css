@@ -76,14 +76,6 @@
   .post-body h3   { font-size: 1.05rem; }
   .post-body      { font-size: 0.95rem; }
 
-  /* 테이블 — 모바일에서 가로 스크롤 */
-  .post-body table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
-  }
-
   /* 코드 블록 — 좌우 패딩 줄임 */
   .post-body pre {
     padding: 1rem;
