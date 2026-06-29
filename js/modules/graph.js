@@ -433,38 +433,39 @@ const Graph = {
     const add   = n => { nodes.push(n); byId[n.id] = n; return n; };
 
     if (this._currentFile) {
-      // ── 포스트 뷰: 현재 카테고리 + 소속 게시글만 ──
+      // ── 포스트 뷰: 현재 카테고리 계층 + 소속 포스트 ──
       const cur = posts.find(p => p.file === this._currentFile);
       const cat = cur?.category;
       if (!cat) return { nodes, links };
 
-      // 카테고리 경로 계층 (예: 개발 → 개발/품질검사시스템)
+      // 카테고리 경로 계층 추가 (개발 → 개발/코드해설)
       const parts = cat.split('/');
       let pathSoFar = '';
       parts.forEach((part, i) => {
         const prev = pathSoFar;
         pathSoFar  = pathSoFar ? `${pathSoFar}/${part}` : part;
-        const isLeaf = i === parts.length - 1;
+        const isLeaf = (i === parts.length - 1);
         add({ id: `cat:${pathSoFar}`, type: 'category', label: part,
-              r: isLeaf ? 13 : 9, depth: i + 1, isCurrent: false });
+              r: isLeaf ? 14 : 9, depth: i + 1, isCurrent: false });
         if (prev) links.push({ source: `cat:${prev}`, target: `cat:${pathSoFar}` });
       });
 
-      // 해당 카테고리(하위 포함)의 게시글
+      // 해당 카테고리(하위 포함) 포스트
       posts
         .filter(p => p.category === cat || p.category?.startsWith(cat + '/'))
         .forEach(p => {
           const isCurrent = p.file === this._currentFile;
           add({ id: `post:${p.file}`, type: 'post',
                 label: p.title || p.file, file: p.file,
-                r: isCurrent ? 9 : 4, isCurrent });
-          const linkCat = byId[`cat:${p.category}`] ? `cat:${p.category}` : `cat:${cat}`;
-          links.push({ source: linkCat, target: `post:${p.file}` });
+                r: isCurrent ? 10 : 5, isCurrent });
+          const linkTarget = byId[`cat:${p.category}`] ? `cat:${p.category}` : `cat:${cat}`;
+          links.push({ source: linkTarget, target: `post:${p.file}` });
         });
 
     } else {
-      // ── 목록 뷰: 전체 카테고리 + 게시글 ──
+      // ── 목록 뷰: 카테고리 노드만 (포스트 제외 — 너무 많아서 뭉침) ──
       const catSet = new Set();
+      const catPostCount = {};
       posts.forEach(p => {
         if (!p.category) return;
         p.category.split('/').reduce((acc, part) => {
@@ -473,27 +474,31 @@ const Graph = {
           return full;
         }, '');
       });
+      // 각 카테고리의 포스트 수 집계
+      catSet.forEach(c => { catPostCount[c] = 0; });
+      posts.forEach(p => {
+        if (!p.category) return;
+        let cur = '';
+        p.category.split('/').forEach(part => {
+          cur = cur ? `${cur}/${part}` : part;
+          if (catPostCount[cur] !== undefined) catPostCount[cur]++;
+        });
+      });
 
       catSet.forEach(cat => {
         const parts = cat.split('/');
+        const depth = parts.length;
+        const count = catPostCount[cat] || 0;
+        const r = Math.min(18, Math.round(8 + Math.max(0, 3 - depth) * 3 + Math.sqrt(count) * 1.5));
         add({ id: `cat:${cat}`, type: 'category',
-              label: parts[parts.length - 1],
-              r: Math.max(5, 11 - parts.length * 2),
-              depth: parts.length, isCurrent: false });
+              label: parts[parts.length - 1], r, depth, count, isCurrent: false });
       });
+      // 부모→자식 링크
       catSet.forEach(cat => {
         const parts = cat.split('/');
         if (parts.length > 1) {
           const parent = parts.slice(0, -1).join('/');
           links.push({ source: `cat:${parent}`, target: `cat:${cat}` });
-        }
-      });
-      posts.forEach(p => {
-        add({ id: `post:${p.file}`, type: 'post',
-              label: p.title || p.file, file: p.file,
-              r: 3.5, isCurrent: false });
-        if (p.category && byId[`cat:${p.category}`]) {
-          links.push({ source: `cat:${p.category}`, target: `post:${p.file}` });
         }
       });
     }
@@ -613,19 +618,23 @@ const Graph = {
         })
     );
 
-    // Force simulation
+    // Force simulation — 좁은 공간(~220×185)에 맞춘 파라미터
     this._miniSim = d3.forceSimulation(nodes)
       .force('link',
         d3.forceLink(validLinks)
           .id(d => d.id)
-          .distance(d => (nodeById[d.source.id ?? d.source]?.type === 'category' ? 35 : 25))
-          .strength(0.8)
+          .distance(d => {
+            const src = nodeById[typeof d.source === 'object' ? d.source.id : d.source];
+            return src?.type === 'category' ? 55 : 38;
+          })
+          .strength(1)
       )
       .force('charge', d3.forceManyBody().strength(d =>
-        d.type === 'category' ? -55 - d.r * 4 : -25
+        d.type === 'category' ? -120 - d.r * 6 : -60
       ))
-      .force('center',    d3.forceCenter(w / 2, h / 2))
-      .force('collision', d3.forceCollide(d => d.r + 4))
+      .force('center',    d3.forceCenter(w / 2, h / 2).strength(0.3))
+      .force('collision', d3.forceCollide(d => d.r + 6))
+      .alphaDecay(0.025)
       .on('tick', () => {
         linkSel
           .attr('x1', d => d.source.x)
@@ -633,7 +642,7 @@ const Graph = {
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
         nodeSel.attr('transform', d =>
-          `translate(${Math.max(d.r, Math.min(w - d.r, d.x ?? w/2))},${Math.max(d.r, Math.min(h - d.r, d.y ?? h/2))})`
+          `translate(${Math.max(d.r + 2, Math.min(w - d.r - 2, d.x ?? w/2))},${Math.max(d.r + 2, Math.min(h - d.r - 2, d.y ?? h/2))})`
         );
       });
   },
