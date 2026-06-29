@@ -27,8 +27,8 @@
 .category-sidebar {
   position: sticky;
   top: calc(var(--header-height) + 1rem);
-  /* 뷰포트 높이 안에 3단 섹션이 모두 들어오도록 */
-  max-height: calc(100vh - var(--header-height) - 2.5rem);
+  /* 명시적 height 필수: flex 자식의 flex:1이 동작하려면 부모 height가 정의돼야 함 */
+  height: calc(100vh - var(--header-height) - 2rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;

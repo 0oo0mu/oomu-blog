@@ -536,9 +536,9 @@ const Graph = {
       .selectAll('line')
       .data(validLinks)
       .join('line')
-      .attr('stroke', 'var(--border)')
-      .attr('stroke-width', 1)
-      .attr('stroke-opacity', 0.7);
+      .style('stroke', 'var(--border)')
+      .style('stroke-width', '1px')
+      .style('stroke-opacity', '0.7');
 
     // 노드 그룹
     const nodeSel = g.append('g')
@@ -547,7 +547,7 @@ const Graph = {
       .join('g')
       .style('cursor', d => d.type === 'post' ? 'pointer' : 'default');
 
-    // 카테고리 → 둥근 사각형
+    // 카테고리 → 둥근 사각형 (style로 CSS 변수 적용)
     nodeSel.filter(d => d.type === 'category')
       .append('rect')
       .attr('rx', 3).attr('ry', 3)
@@ -555,16 +555,17 @@ const Graph = {
       .attr('y',      d => -d.r * 0.65)
       .attr('width',  d => d.r * 2)
       .attr('height', d => d.r * 1.3)
-      .attr('fill',   'var(--graph-cat)')
-      .attr('stroke', 'var(--accent)')
-      .attr('stroke-width', d => Math.max(1, 2.2 - (d.depth - 1) * 0.4));
+      .style('fill',         'var(--accent)')
+      .style('fill-opacity', '0.75')
+      .style('stroke',       'var(--accent)')
+      .style('stroke-width', d => `${Math.max(1, 2.2 - (d.depth - 1) * 0.4)}px`);
 
     // 카테고리 레이블
     nodeSel.filter(d => d.type === 'category')
       .append('text')
       .text(d => d.label.length > 5 ? d.label.slice(0, 5) + '…' : d.label)
       .attr('font-size', d => `${Math.max(7, 9 - (d.depth - 1))}px`)
-      .attr('fill', 'var(--text)')
+      .style('fill', 'var(--bg)')
       .attr('text-anchor', 'middle')
       .attr('dy', '0.35em')
       .style('pointer-events', 'none');
@@ -572,17 +573,18 @@ const Graph = {
     // 게시글 → 원
     nodeSel.filter(d => d.type === 'post')
       .append('circle')
-      .attr('r',      d => d.r)
-      .attr('fill',   d => d.isCurrent ? 'var(--accent)' : 'var(--graph-post)')
-      .attr('stroke', d => d.isCurrent ? '#fff' : 'none')
-      .attr('stroke-width', 1.5);
+      .attr('r', d => d.r)
+      .style('fill',         d => d.isCurrent ? 'var(--accent)' : 'var(--text-muted)')
+      .style('fill-opacity', d => d.isCurrent ? '1' : '0.6')
+      .style('stroke',       d => d.isCurrent ? '#fff' : 'none')
+      .style('stroke-width', '1.5px');
 
     // 현재 게시글 레이블
     nodeSel.filter(d => d.isCurrent)
       .append('text')
       .text(d => d.label.length > 8 ? d.label.slice(0, 8) + '…' : d.label)
       .attr('font-size', '7px')
-      .attr('fill', 'var(--accent)')
+      .style('fill', 'var(--accent)')
       .attr('text-anchor', 'middle')
       .attr('dy', d => d.r + 9)
       .style('pointer-events', 'none');
