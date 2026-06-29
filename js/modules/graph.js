@@ -14,31 +14,39 @@ import App    from '../core/app.js';
 import Router from '../core/router.js';
 
 const Graph = {
-  _posts:      [],
+  _posts:       [],
   _currentFile: null,
-  _isVisible:  false,
-  _sim:        null,   // D3 simulation 인스턴스
-  _d3:         null,   // window.d3 참조
+  _isVisible:   false,
+  _sim:         null,   // D3 전체 그래프 simulation
+  _miniSim:     null,   // D3 미니 그래프 simulation
+  _d3:          null,   // window.d3 참조
 
   // ─────────────────────────────────────────
   // [1] 초기화
   // ─────────────────────────────────────────
 
   init() {
-    // 포스트 데이터 수신
+    // 포스트 데이터 수신 → 미니 그래프 초기 렌더
     App.on('posts:loaded', ({ posts }) => {
       this._posts = posts;
+      // D3 로드 후 미니 그래프 그리기
+      this._loadD3().then(() => {
+        this._d3 = window.d3;
+        this._rebuildMini();
+      });
     });
 
     // 현재 포스트 추적
     App.on('router:post', ({ file }) => {
       this._currentFile = file;
       if (this._isVisible) this._rebuild();
+      this._rebuildMini();
     });
 
     App.on('router:list', () => {
       this._currentFile = null;
       if (this._isVisible) this._rebuild();
+      this._rebuildMini();
     });
 
     this._createButton();
@@ -405,6 +413,227 @@ const Graph = {
     if (!tt) return;
     tt.style.left = `${ev.clientX + 14}px`;
     tt.style.top  = `${ev.clientY - 36}px`;
+  },
+
+  // ─────────────────────────────────────────
+  // [6] 미니 그래프 (사이드바 내장)
+  // ─────────────────────────────────────────
+
+  /**
+   * 미니 그래프용 노드·링크 데이터를 빌드합니다.
+   *
+   * 포스트 뷰: 현재 게시글의 카테고리 경로 + 같은 카테고리 게시글만 표시
+   * 목록 뷰: 모든 카테고리 + 모든 게시글
+   */
+  _buildMiniData() {
+    const posts = this._posts;
+    const nodes = [];
+    const links = [];
+    const byId  = {};
+    const add   = n => { nodes.push(n); byId[n.id] = n; return n; };
+
+    if (this._currentFile) {
+      // ── 포스트 뷰: 현재 카테고리 + 소속 게시글만 ──
+      const cur = posts.find(p => p.file === this._currentFile);
+      const cat = cur?.category;
+      if (!cat) return { nodes, links };
+
+      // 카테고리 경로 계층 (예: 개발 → 개발/품질검사시스템)
+      const parts = cat.split('/');
+      let pathSoFar = '';
+      parts.forEach((part, i) => {
+        const prev = pathSoFar;
+        pathSoFar  = pathSoFar ? `${pathSoFar}/${part}` : part;
+        const isLeaf = i === parts.length - 1;
+        add({ id: `cat:${pathSoFar}`, type: 'category', label: part,
+              r: isLeaf ? 13 : 9, depth: i + 1, isCurrent: false });
+        if (prev) links.push({ source: `cat:${prev}`, target: `cat:${pathSoFar}` });
+      });
+
+      // 해당 카테고리(하위 포함)의 게시글
+      posts
+        .filter(p => p.category === cat || p.category?.startsWith(cat + '/'))
+        .forEach(p => {
+          const isCurrent = p.file === this._currentFile;
+          add({ id: `post:${p.file}`, type: 'post',
+                label: p.title || p.file, file: p.file,
+                r: isCurrent ? 9 : 4, isCurrent });
+          const linkCat = byId[`cat:${p.category}`] ? `cat:${p.category}` : `cat:${cat}`;
+          links.push({ source: linkCat, target: `post:${p.file}` });
+        });
+
+    } else {
+      // ── 목록 뷰: 전체 카테고리 + 게시글 ──
+      const catSet = new Set();
+      posts.forEach(p => {
+        if (!p.category) return;
+        p.category.split('/').reduce((acc, part) => {
+          const full = acc ? `${acc}/${part}` : part;
+          catSet.add(full);
+          return full;
+        }, '');
+      });
+
+      catSet.forEach(cat => {
+        const parts = cat.split('/');
+        add({ id: `cat:${cat}`, type: 'category',
+              label: parts[parts.length - 1],
+              r: Math.max(5, 11 - parts.length * 2),
+              depth: parts.length, isCurrent: false });
+      });
+      catSet.forEach(cat => {
+        const parts = cat.split('/');
+        if (parts.length > 1) {
+          const parent = parts.slice(0, -1).join('/');
+          links.push({ source: `cat:${parent}`, target: `cat:${cat}` });
+        }
+      });
+      posts.forEach(p => {
+        add({ id: `post:${p.file}`, type: 'post',
+              label: p.title || p.file, file: p.file,
+              r: 3.5, isCurrent: false });
+        if (p.category && byId[`cat:${p.category}`]) {
+          links.push({ source: `cat:${p.category}`, target: `post:${p.file}` });
+        }
+      });
+    }
+
+    return { nodes, links };
+  },
+
+  /** 미니 그래프를 D3로 렌더링합니다. */
+  _rebuildMini() {
+    const d3    = this._d3 || window.d3;
+    const svgEl = document.getElementById('miniGraphSvg');
+    if (!d3 || !svgEl) return;
+
+    if (this._miniSim) { this._miniSim.stop(); this._miniSim = null; }
+
+    const w = svgEl.clientWidth  || 220;
+    const h = svgEl.clientHeight || 185;
+
+    const svg = d3.select(svgEl);
+    svg.selectAll('*').remove();
+
+    const { nodes, links } = this._buildMiniData();
+    if (!nodes.length) return;
+
+    // 링크 ID 해석
+    const nodeById = {};
+    nodes.forEach(n => { nodeById[n.id] = n; });
+    const validLinks = links.filter(l => nodeById[l.source] && nodeById[l.target]);
+
+    // 줌/패닝
+    const g = svg.append('g');
+    svg.call(
+      d3.zoom()
+        .scaleExtent([0.4, 4])
+        .on('zoom', ev => g.attr('transform', ev.transform))
+    );
+
+    // 링크
+    const linkSel = g.append('g')
+      .selectAll('line')
+      .data(validLinks)
+      .join('line')
+      .attr('stroke', 'var(--border)')
+      .attr('stroke-width', 1)
+      .attr('stroke-opacity', 0.7);
+
+    // 노드 그룹
+    const nodeSel = g.append('g')
+      .selectAll('g')
+      .data(nodes)
+      .join('g')
+      .style('cursor', d => d.type === 'post' ? 'pointer' : 'default');
+
+    // 카테고리 → 둥근 사각형
+    nodeSel.filter(d => d.type === 'category')
+      .append('rect')
+      .attr('rx', 3).attr('ry', 3)
+      .attr('x',      d => -d.r)
+      .attr('y',      d => -d.r * 0.65)
+      .attr('width',  d => d.r * 2)
+      .attr('height', d => d.r * 1.3)
+      .attr('fill',   'var(--graph-cat)')
+      .attr('stroke', 'var(--accent)')
+      .attr('stroke-width', d => Math.max(1, 2.2 - (d.depth - 1) * 0.4));
+
+    // 카테고리 레이블
+    nodeSel.filter(d => d.type === 'category')
+      .append('text')
+      .text(d => d.label.length > 5 ? d.label.slice(0, 5) + '…' : d.label)
+      .attr('font-size', d => `${Math.max(7, 9 - (d.depth - 1))}px`)
+      .attr('fill', 'var(--text)')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .style('pointer-events', 'none');
+
+    // 게시글 → 원
+    nodeSel.filter(d => d.type === 'post')
+      .append('circle')
+      .attr('r',      d => d.r)
+      .attr('fill',   d => d.isCurrent ? 'var(--accent)' : 'var(--graph-post)')
+      .attr('stroke', d => d.isCurrent ? '#fff' : 'none')
+      .attr('stroke-width', 1.5);
+
+    // 현재 게시글 레이블
+    nodeSel.filter(d => d.isCurrent)
+      .append('text')
+      .text(d => d.label.length > 8 ? d.label.slice(0, 8) + '…' : d.label)
+      .attr('font-size', '7px')
+      .attr('fill', 'var(--accent)')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => d.r + 9)
+      .style('pointer-events', 'none');
+
+    // 클릭 → 포스트 이동
+    nodeSel.filter(d => d.type === 'post')
+      .on('click', (ev, d) => { Router.goPost(d.file); });
+
+    // 툴팁
+    const tip = document.getElementById('miniGraphTooltip');
+    nodeSel
+      .on('mouseenter', (ev, d) => { if (tip) { tip.textContent = d.label; tip.style.opacity = '1'; } })
+      .on('mouseleave', ()       => { if (tip) tip.style.opacity = '0'; });
+
+    // 드래그
+    nodeSel.call(
+      d3.drag()
+        .on('start', (ev, d) => {
+          if (!ev.active) this._miniSim.alphaTarget(0.3).restart();
+          d.fx = d.x; d.fy = d.y;
+        })
+        .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+        .on('end',   (ev, d) => {
+          if (!ev.active) this._miniSim.alphaTarget(0);
+          d.fx = null; d.fy = null;
+        })
+    );
+
+    // Force simulation
+    this._miniSim = d3.forceSimulation(nodes)
+      .force('link',
+        d3.forceLink(validLinks)
+          .id(d => d.id)
+          .distance(d => (nodeById[d.source.id ?? d.source]?.type === 'category' ? 35 : 25))
+          .strength(0.8)
+      )
+      .force('charge', d3.forceManyBody().strength(d =>
+        d.type === 'category' ? -55 - d.r * 4 : -25
+      ))
+      .force('center',    d3.forceCenter(w / 2, h / 2))
+      .force('collision', d3.forceCollide(d => d.r + 4))
+      .on('tick', () => {
+        linkSel
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+        nodeSel.attr('transform', d =>
+          `translate(${Math.max(d.r, Math.min(w - d.r, d.x ?? w/2))},${Math.max(d.r, Math.min(h - d.r, d.y ?? h/2))})`
+        );
+      });
   },
 };
 

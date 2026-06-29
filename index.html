@@ -116,28 +116,39 @@
       </button>
       <div class="sidebar-content" id="sidebarContent">
 
-        <!-- 검색바 -->
-        <div class="sidebar-section">
+        <!-- ── 상단: 검색 + 카테고리 ── -->
+        <div class="sidebar-section sidebar-section--top">
           <div class="search-wrap">
             <span class="search-icon">🔍</span>
             <input type="text" id="searchInput" class="search-input"
               placeholder="검색... (단축키: /)" autocomplete="off" spellcheck="false" />
             <button class="search-clear" id="searchClear" title="지우기">✕</button>
           </div>
-        </div>
-
-        <!-- 카테고리 트리 -->
-        <div class="sidebar-section">
-          <p class="sidebar-label">카테고리</p>
+          <p class="sidebar-label" style="margin-top:0.75rem">카테고리</p>
           <ul class="category-tree" id="categoryTree">
             <li style="color:var(--text-muted);font-size:0.82rem;padding:.3rem .5rem">불러오는 중...</li>
           </ul>
         </div>
 
-        <!-- 태그 칩 -->
-        <div class="sidebar-section">
+        <!-- ── 중단: 미니 그래프 ── -->
+        <div class="sidebar-section sidebar-section--mid">
+          <p class="sidebar-label">연결 그래프</p>
+          <div class="mini-graph-container" id="miniGraphContainer">
+            <svg id="miniGraphSvg"></svg>
+            <div id="miniGraphTooltip" class="mini-graph-tooltip"></div>
+          </div>
+        </div>
+
+        <!-- ── 하단: 태그 + 태그 검색 ── -->
+        <div class="sidebar-section sidebar-section--bot">
           <p class="sidebar-label">태그</p>
-          <div class="filter-chips" id="tagChips"></div>
+          <div class="tag-search-wrap">
+            <input type="text" id="tagSearchInput" class="tag-search-input"
+              placeholder="태그 검색..." autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="tag-chips-scroll">
+            <div class="filter-chips" id="tagChips"></div>
+          </div>
         </div>
 
       </div>

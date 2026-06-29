@@ -64,15 +64,24 @@ const Filter = {
     const container = document.getElementById('tagChips');
     if (!container) return;
 
-    const tags = ['all', ...new Set(this._allPosts.flatMap(p => p.tags || []))];
+    const allTags = ['all', ...new Set(this._allPosts.flatMap(p => p.tags || []))];
 
-    container.innerHTML = tags.map(tag => `
-      <button class="chip ${tag === this.state.tag ? 'active' : ''}"
-              data-value="${tag}">
-        ${tag === 'all' ? '전체' : '#' + tag}
-      </button>
-    `).join('');
+    const render = (filterText = '') => {
+      const q = filterText.trim().toLowerCase();
+      const visible = allTags.filter(t =>
+        t === 'all' || !q || t.toLowerCase().includes(q)
+      );
+      container.innerHTML = visible.map(tag => `
+        <button class="chip ${tag === this.state.tag ? 'active' : ''}"
+                data-value="${tag}">
+          ${tag === 'all' ? '전체' : '#' + tag}
+        </button>
+      `).join('');
+    };
 
+    render();
+
+    // 태그 칩 클릭
     container.addEventListener('click', (e) => {
       const btn = e.target.closest('.chip');
       if (!btn) return;
@@ -81,6 +90,17 @@ const Filter = {
       this.state.tag = btn.dataset.value;
       this._applyFilter();
     });
+
+    // 태그 검색 입력
+    const tagSearch = document.getElementById('tagSearchInput');
+    if (tagSearch) {
+      tagSearch.addEventListener('input', () => {
+        render(tagSearch.value);
+        // 현재 선택된 태그 active 복원
+        const active = container.querySelector(`[data-value="${this.state.tag}"]`);
+        if (active) active.classList.add('active');
+      });
+    }
   },
 
   /**

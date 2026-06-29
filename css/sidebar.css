@@ -27,20 +27,123 @@
 .category-sidebar {
   position: sticky;
   top: calc(var(--header-height) + 1rem);
-  /* 전체 사이드바는 overflow 없이 자연스럽게 흐름 */
+  /* 뷰포트 높이 안에 3단 섹션이 모두 들어오도록 */
+  max-height: calc(100vh - var(--header-height) - 2.5rem);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   gap: 0;
 }
 
-/* 섹션 구분 */
+/* 섹션 공통 */
 .sidebar-section {
-  padding-bottom: 1rem;
+  flex-shrink: 0;
 }
 .sidebar-section + .sidebar-section {
-  padding-top: 0.75rem;
   border-top: 1px solid var(--border);
 }
+
+/* ── 상단: 검색 + 카테고리 (스크롤 가능) ── */
+.sidebar-section--top {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0.75rem;
+}
+.sidebar-section--top .category-tree-wrap {
+  flex: 1;
+  min-height: 0;
+}
+/* sidebar.js가 동적으로 .category-tree-wrap을 삽입하므로
+   tree 자체도 flex로 채우도록 */
+.sidebar-section--top > .category-tree {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ── 중단: 미니 그래프 (고정 높이) ── */
+.sidebar-section--mid {
+  flex: 0 0 auto;
+  padding: 0.6rem 0;
+}
+
+.mini-graph-container {
+  position: relative;
+  height: 185px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#miniGraphSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mini-graph-tooltip {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 하단: 태그 + 태그 검색 (스크롤 가능) ── */
+.sidebar-section--bot {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 0.6rem;
+  max-height: 38%;
+}
+
+/* 태그 검색 입력창 */
+.tag-search-wrap {
+  flex-shrink: 0;
+  margin-bottom: 0.45rem;
+}
+.tag-search-input {
+  width: 100%;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  font-family: var(--font);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.tag-search-input:focus { border-color: var(--accent); }
+.tag-search-input::placeholder { color: var(--text-muted); }
+
+/* 태그 칩 스크롤 영역 */
+.tag-chips-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.tag-chips-scroll::-webkit-scrollbar { width: 3px; }
+.tag-chips-scroll::-webkit-scrollbar-track { background: transparent; }
+.tag-chips-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .sidebar-label {
   font-size: 0.7rem;
@@ -57,7 +160,8 @@
    검색바, 태그, 레이블 등은 스크롤 밖에 고정됩니다.
    ══════════════════════════════════════════════ */
 .category-tree-wrap {
-  max-height: 420px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   margin: 0 -0.25rem;
@@ -201,6 +305,9 @@
 .sidebar-content {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   gap: 0;
 }
 
@@ -230,6 +337,6 @@
 
   .sidebar-toggle { display: flex; }
 
-  /* 모바일에서 트리 스크롤 높이 조정 */
-  .category-tree-wrap { max-height: 260px; }
+  /* 모바일에서 사이드바 높이 제한 해제 */
+  .category-sidebar { max-height: none; }
 }
