@@ -145,8 +145,15 @@
 
           <!-- 카테고리 -->
           <div>
-            <label class="fm-label" for="fmCategory">카테고리</label>
-            <input type="text" id="fmCategory" class="fm-input" placeholder="예: 개발/javascript" />
+            <label class="fm-label" for="fmCategorySelect">카테고리</label>
+            <select id="fmCategorySelect" class="fm-input">
+              <!-- JS(editor.js)가 posts.json에서 읽어 채웁니다 -->
+            </select>
+            <!-- 실제 저장에 쓰이는 값. 드롭다운이 이 값을 세팅함.
+                 '직접 입력' 선택 시에만 보이는 새 카테고리 입력칸 -->
+            <input type="text" id="fmCategory" class="fm-input"
+                   placeholder="새 카테고리 (예: 개발/javascript)"
+                   style="display:none; margin-top:8px;" />
           </div>
 
           <!-- 태그 (전체 너비) -->

@@ -23,6 +23,7 @@ const Editor = {
    */
   init() {
     this._bindFormPreview();   // Front Matter 변경 → 미리보기 업데이트
+    this._bindCategoryDropdown(); // 카테고리 드롭다운 (posts.json 연동)
     this._bindTextarea();      // 본문 입력 → 미리보기 업데이트
     this._bindFormatBtns();    // 서식 버튼 클릭
     this._bindSaveBtn();       // 로컬 저장 버튼
@@ -47,6 +48,64 @@ const Editor = {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', () => this._updatePreview());
     });
+  },
+
+  // ══════════════════════════════════════════════════════
+  // [1-2] 카테고리 드롭다운 (posts.json 연동)
+  // ══════════════════════════════════════════════════════
+
+  /**
+   * 카테고리 드롭다운을 posts.json의 실제 카테고리로 채우고,
+   * 선택 값을 실제 저장에 쓰이는 #fmCategory input에 반영합니다.
+   *
+   * 옵션 구성:
+   *   ''        → (파일 경로에서 자동) — 비워두면 build.js가 폴더 경로로 채움
+   *   각 카테고리 → posts.json에서 뽑은 실제 카테고리들
+   *   '__new__' → + 새 카테고리 직접 입력 → 텍스트 입력칸 노출
+   *
+   * posts.json fetch 실패(file://로 열었을 때 등) 시:
+   *   드롭다운은 기본 옵션만 두고, 직접 입력 input을 항상 쓸 수 있게 폴백.
+   */
+  async _bindCategoryDropdown() {
+    const select   = document.getElementById('fmCategorySelect');
+    const textInput = document.getElementById('fmCategory');
+    if (!select || !textInput) return;
+
+    const NEW = '__new__';
+
+    // 드롭다운 변경 → 실제 값(#fmCategory) 세팅
+    select.addEventListener('change', () => {
+      if (select.value === NEW) {
+        // 직접 입력 모드: 텍스트칸 노출 + 값 비우고 포커스
+        textInput.style.display = '';
+        textInput.value = '';
+        textInput.focus();
+      } else {
+        // 기존 카테고리(또는 자동) 선택: 텍스트칸 숨기고 값 반영
+        textInput.style.display = 'none';
+        textInput.value = select.value; // '' 이면 build.js가 폴더로 자동 분류
+      }
+      this._updatePreview();
+    });
+
+    // 카테고리 목록 로드
+    let categories = [];
+    try {
+      const res  = await fetch('posts/posts.json', { cache: 'no-store' });
+      const data = await res.json();
+      categories = [...new Set(data.map(p => p.category).filter(Boolean))].sort();
+    } catch (err) {
+      // file://로 열면 fetch가 막힘 → 직접 입력만으로 폴백
+      console.warn('[Editor] posts.json 로드 실패, 직접 입력만 사용:', err.message);
+    }
+
+    const opts = [
+      `<option value="">(파일 경로에서 자동)</option>`,
+      ...categories.map(c => `<option value="${c}">${c}</option>`),
+      `<option value="${NEW}">+ 새 카테고리 직접 입력</option>`,
+    ];
+    select.innerHTML = opts.join('');
+    textInput.style.display = 'none'; // 시작은 드롭다운 모드
   },
 
   /**
@@ -382,6 +441,10 @@ const Editor = {
         document.getElementById('fmTitle').value    = '';
         document.getElementById('fmDate').value     = new Date().toISOString().slice(0, 10);
         document.getElementById('fmCategory').value = '';
+        // 카테고리 드롭다운도 '자동'으로 되돌리고 직접입력칸 숨김
+        const catSel = document.getElementById('fmCategorySelect');
+        if (catSel) catSel.value = '';
+        document.getElementById('fmCategory').style.display = 'none';
         document.getElementById('fmTags').value     = '';
         document.getElementById('fmExcerpt').value  = '';
         document.getElementById('editorTextarea').value = '';
