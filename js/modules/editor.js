@@ -432,41 +432,9 @@ const Editor = {
     const content  = this._buildFileContent();
     const filename = this._getSuggestedFilename();
 
-    // File System Access API 지원 여부 확인
-    if (!window.showSaveFilePicker) {
-      // 미지원 브라우저: 다운로드로 폴백
-      this._downloadFile(content, filename);
-      return;
-    }
-
-    try {
-      // 처음 저장이거나 파일 핸들이 없으면 파일 선택 창 열기
-      if (!this._fileHandle) {
-        this._fileHandle = await window.showSaveFilePicker({
-          // 기본 파일명 제안
-          suggestedName: filename,
-          // .md 파일만 허용
-          types: [{
-            description: 'Markdown 파일',
-            accept: { 'text/markdown': ['.md'] },
-          }],
-        });
-      }
-
-      // 파일에 쓰기
-      const writable = await this._fileHandle.createWritable();
-      await writable.write(content);
-      await writable.close();
-
-      this._showSaveSuccess();
-
-    } catch (err) {
-      // 사용자가 파일 선택 창을 닫은 경우 (AbortError)는 무시
-      if (err.name !== 'AbortError') {
-        console.error('[Editor] 저장 실패:', err);
-        alert('저장에 실패했습니다: ' + err.message);
-      }
-    }
+    // 브라우저 구분 없이 항상 다운로드 폴더로 저장합니다.
+    // (Chrome/Edge의 "다른 이름으로 저장" 창을 쓰지 않고 바로 다운로드)
+    this._downloadFile(content, filename);
   },
 
   /**
@@ -573,3 +541,4 @@ function showToast(message, duration = 4000) {
 }
 
 export default Editor;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               

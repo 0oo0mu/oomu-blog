@@ -1,0 +1,70 @@
+블로그 프로젝트 컨텍스트
+프로젝트 개요
+
+정적 블로그 (Node.js 빌드 스크립트 + 순수 HTML/CSS/JS, 백엔드 없음)
+위치: D:\AI\Blog
+배포: GitHub Pages (https://0oo0mu.github.io/oomu-blog/)
+GitHub: https://github.com/0oo0mu/oomu-blog.git
+배포 방법: deploy.bat 실행 (build.js 빌드 → git add/commit/push)
+
+폴더 구조
+D:\AI\Blog\
+├── build.js          ← posts/ 스캔 → posts/posts.json 생성
+├── deploy.bat        ← node build.js + git push (UTF-8, chcp 65001)
+├── index.html        ← SPA 메인 (목록 + 포스트 뷰 전환)
+├── post.html         ← standalone 포스트 페이지
+├── editor.html       ← 로컬 전용 글쓰기
+├── css/
+│   ├── variables.css, base.css, header.css, sidebar.css
+│   ├── post.css, cards.css, filters.css, toc.css
+│   ├── responsive.css, graph.css, music-player.css
+├── js/
+│   ├── app-index.js  ← SPA 진입점 (Router.init()은 App.on 등록 후에 위치)
+│   ├── app-post.js   ← post.html 진입점
+│   ├── core/         ← app.js(이벤트버스), router.js(SPA), theme.js, accent.js 등
+│   └── modules/      ← sidebar.js, filter.js, graph.js, markdown.js 등
+└── posts/
+    ├── posts.json    ← build.js가 자동 생성, 직접 수정 금지
+    ├── 개발/블로그코드/   ← 코드해설 01~15 (총 16개 .md)
+    ├── 개발/품질검사시스템/ ← 00~10 (총 11개 .md)
+    └── 언어/          ← c-basics.md, java-basics.md
+핵심 기술 사항
+
+SPA 라우팅: index.html?file=경로/파일.md 형식. Router.init()은 반드시 App.on('router:post', ...) 등록 이후에 호출해야 F5 새로고침 동작함 (버그 수정 완료)
+Front Matter 파서: ---\n...\n---\n 형식. title: 값에 큰따옴표 쓰면 UI에 " 그대로 표시됨 → 따옴표 없이 작성
+build.js: posts/ 폴더 재귀 스캔 → front matter 파싱 → posts.json 생성
+CSS 변수: variables.css에 모든 색상/크기 변수 정의
+
+사이드바 구조 (최근 개편 완료)
+3단 구조:
+
+상단: 검색창 + 카테고리 트리 (스크롤 가능)
+중단: 미니 D3 그래프 (185px 고정)
+
+목록 뷰: 카테고리 노드만 표시
+포스트 뷰: 현재 카테고리 계층 + 소속 포스트
+
+
+하단: 태그 검색 + 태그 칩 (스크롤 가능)
+
+그래프 (graph.js)
+
+전체 그래프: 헤더 🕸 버튼 → 전체화면 오버레이 (D3 v7)
+미니 그래프: 사이드바 중단 (#miniGraphSvg)
+D3는 CDN에서 동적 로드 (_loadD3())
+SVG fill/stroke는 .style() 사용 (.attr()은 CSS 변수 미적용)
+
+게시글 작성 규칙
+yaml---
+title: 제목 (따옴표 없이)
+date: 2026-06-22
+category: 개발/품질검사시스템
+tags: [태그1, 태그2]
+excerpt: 한 줄 요약
+---
+본문...
+미완료 / 다음에 할 것
+
+일일 퀘스트(체크리스트) 기능: 다른 기기에서도 보려면 Supabase DB 연동 필요. 현재 블로그에서 로그인 기능 제거된 상태라 재연동 필요
+blog.config.json의 siteUrl이 아직 기본값(https://yourblog.com)임 → 실제 주소로 변경 시 sitemap.xml 생성됨
+미니 그래프 노드 표시 방식 계속 튜닝 중
