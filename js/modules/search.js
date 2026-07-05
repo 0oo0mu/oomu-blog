@@ -79,4 +79,24 @@ const Search = {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         input.value = '';
-        if (clearBtn) clearBtn.style.display
+        if (clearBtn) clearBtn.style.display = 'none';
+        App.emit('filter:search', { query: '' });
+        input.blur(); // 포커스 해제
+      }
+    });
+
+    // ── 헤더의 🔍 단축키: '/' 키를 누르면 검색창 포커스 ──
+    // (입력 중일 때는 동작하지 않도록 조건 추가)
+    document.addEventListener('keydown', (e) => {
+      const tag = document.activeElement?.tagName;
+      const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+      if (e.key === '/' && !isTyping) {
+        e.preventDefault(); // 브라우저 기본 동작 방지
+        input.focus();
+        input.select();
+      }
+    });
+  },
+};
+
+export default Search;

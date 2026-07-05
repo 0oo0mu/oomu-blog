@@ -63,6 +63,21 @@ tags: [태그1, 태그2]
 excerpt: 한 줄 요약
 ---
 본문...
+
+글쓰기(에디터) 진입 방법
+
+목록 페이지 검색창에 '글쓰기'라고 정확히 입력하면 editor.html로 이동함 (search.js의 숨은 명령어 EDITOR_COMMAND)
+헤더에 눈에 띄는 글쓰기 버튼을 두지 않으려는 용도. 방문자는 모르고 작성자만 아는 진입점
+env.js는 로컬에서만 글쓰기 버튼 표시(이건 그대로), 이 검색 트릭은 웹에서도 동작
+에디터 저장 = 항상 다운로드 폴더로 .md 다운 (editor.js의 save()가 브라우저 구분 없이 _downloadFile 사용. 크롬/엣지의 '다른 이름으로 저장' 창 안 씀)
+
+배포 환경 복구 메모 (2026-07-05)
+
+PC 포맷하면 Node/Git 재설치 필요. deploy.bat이 node build.js + git을 부름
+포맷 후 git push 시 'dubious ownership' 에러 → git config --global --add safe.directory D:/AI/Blog
+git 전역 설정도 날아가므로: git config --global user.name "0oo0mu" / user.email "nam24hi@naver.com"
+push 인증은 브라우저 로그인(Git Credential Manager)
+
 미완료 / 다음에 할 것
 
 일일 퀘스트(체크리스트) 기능: 다른 기기에서도 보려면 Supabase DB 연동 필요. 현재 블로그에서 로그인 기능 제거된 상태라 재연동 필요
