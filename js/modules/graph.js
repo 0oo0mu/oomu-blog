@@ -530,10 +530,12 @@ const Graph = {
 
     // 줌/패닝
     const g = svg.append('g');
+    // 현재 줌/팬 변환을 저장 → 드래그 시 포인터 좌표를 시뮬레이션 좌표로 역변환하는 데 사용
+    let miniTransform = d3.zoomIdentity;
     svg.call(
       d3.zoom()
         .scaleExtent([0.4, 4])
-        .on('zoom', ev => g.attr('transform', ev.transform))
+        .on('zoom', ev => { miniTransform = ev.transform; g.attr('transform', ev.transform); })
     );
 
     // 링크
@@ -605,13 +607,18 @@ const Graph = {
       .on('mouseleave', ()       => { if (tip) tip.style.opacity = '0'; });
 
     // 드래그
+    // 포인터 좌표(svg 기준)를 현재 줌 변환의 역으로 풀어 시뮬레이션 좌표로 변환합니다.
+    // → 확대/이동한 상태에서도 노드가 커서를 정확히 따라옵니다.
     nodeSel.call(
       d3.drag()
         .on('start', (ev, d) => {
           if (!ev.active) this._miniSim.alphaTarget(0.3).restart();
           d.fx = d.x; d.fy = d.y;
         })
-        .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+        .on('drag',  (ev, d) => {
+          const [px, py] = miniTransform.invert(d3.pointer(ev, svgEl));
+          d.fx = px; d.fy = py;
+        })
         .on('end',   (ev, d) => {
           if (!ev.active) this._miniSim.alphaTarget(0);
           d.fx = null; d.fy = null;
@@ -636,14 +643,24 @@ const Graph = {
       .force('collision', d3.forceCollide(d => d.r + 6))
       .alphaDecay(0.025)
       .on('tick', () => {
+        // ── 노드를 SVG 영역 안으로 가두기 ──
+        // 중요: d.x/d.y 값 자체를 보정해야 링크(선)와 노드(상자)가 같은
+        // 좌표를 공유합니다. (예전엔 노드만 transform에서 clamp하고 링크는
+        // 원본 좌표를 써서 선이 상자에 닿지 않았음)
+        // 벽에 닿으면 해당 축 속도(vx/vy)를 0으로 눌러 떨림도 줄입니다.
+        nodes.forEach(d => {
+          const nx = Math.max(d.r + 2, Math.min(w - d.r - 2, d.x ?? w / 2));
+          const ny = Math.max(d.r + 2, Math.min(h - d.r - 2, d.y ?? h / 2));
+          if (nx !== d.x) { d.x = nx; d.vx = 0; }
+          if (ny !== d.y) { d.y = ny; d.vy = 0; }
+        });
+
         linkSel
           .attr('x1', d => d.source.x)
           .attr('y1', d => d.source.y)
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
-        nodeSel.attr('transform', d =>
-          `translate(${Math.max(d.r + 2, Math.min(w - d.r - 2, d.x ?? w/2))},${Math.max(d.r + 2, Math.min(h - d.r - 2, d.y ?? h/2))})`
-        );
+        nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
       });
   },
 };

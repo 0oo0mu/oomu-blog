@@ -11,7 +11,8 @@
  *   - 탭 키 들여쓰기 지원
  */
 
-import Markdown from './markdown.js';
+import Markdown    from './markdown.js';
+import PostEnhance from './post-enhance.js';
 
 const Editor = {
   /** 현재 열려있는 파일 핸들 (File System Access API, 로컬 전용) */
@@ -182,6 +183,8 @@ const Editor = {
     if (bodyEl) {
       if (content.trim()) {
         bodyEl.innerHTML = Markdown.parse(content);
+        // 코드 하이라이팅 + 헤더 토글을 미리보기에도 적용
+        PostEnhance.apply(bodyEl);
       } else {
         bodyEl.innerHTML = `
           <div class="preview-empty">

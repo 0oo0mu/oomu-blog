@@ -1,0 +1,167 @@
+/**
+ * css/code.css — 코드 블록 하이라이팅(노션 스타일) + 헤더 토글
+ *
+ * highlight.js 토큰 색을 사이트 테마(라이트/다크)에 맞춰 CSS 변수로 정의합니다.
+ * highlight.js의 자체 테마 CSS는 불러오지 않습니다 (여기서 직접 색을 지정).
+ */
+
+/* ── 토큰 색 팔레트: 라이트(기본) ── */
+:root {
+  --hl-comment: #6a737d;
+  --hl-keyword: #d73a49;
+  --hl-string:  #032f62;
+  --hl-number:  #005cc5;
+  --hl-title:   #6f42c1;  /* 함수/클래스명 */
+  --hl-builtin: #e36209;  /* 내장/타입 */
+  --hl-attr:    #005cc5;  /* 속성/변수 */
+  --hl-tag:     #22863a;  /* 태그 */
+  --hl-meta:    #6a737d;
+}
+
+/* ── 토큰 색 팔레트: 다크 ── */
+:root.dark {
+  --hl-comment: #8b949e;
+  --hl-keyword: #ff7b72;
+  --hl-string:  #a5d6ff;
+  --hl-number:  #79c0ff;
+  --hl-title:   #d2a8ff;
+  --hl-builtin: #ffa657;
+  --hl-attr:    #79c0ff;
+  --hl-tag:     #7ee787;
+  --hl-meta:    #8b949e;
+}
+
+/* ══════════════════════════════════════════════════
+   코드 블록 컨테이너 (노션식: 헤더바 + 코드)
+   ══════════════════════════════════════════════════ */
+.post-body .code-block {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-code);
+}
+
+/* 헤더바: 언어 라벨 + 복사 버튼 */
+.post-body .code-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+}
+.post-body .code-lang {
+  font-family: var(--font-code);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.post-body .code-copy {
+  font-size: 0.72rem;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.15rem 0.55rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.post-body .code-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.post-body .code-copy.copied {
+  color: #16a34a;
+  border-color: #16a34a;
+}
+
+/* 컨테이너 안의 pre는 테두리/여백 제거 (컨테이너가 담당) */
+.post-body .code-block pre {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  background: transparent;
+}
+
+/* highlight.js 처리된 code: 기본 텍스트 색 */
+.post-body pre code.hljs {
+  color: var(--text);
+  background: transparent;
+  padding: 0;
+}
+
+/* ── highlight.js 토큰 → 테마 변수 매핑 ── */
+.hljs-comment,
+.hljs-quote            { color: var(--hl-comment); font-style: italic; }
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-name             { color: var(--hl-keyword); }
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition         { color: var(--hl-string); }
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet           { color: var(--hl-number); }
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-section          { color: var(--hl-title); }
+
+.hljs-built_in,
+.hljs-type,
+.hljs-class .hljs-title,
+.hljs-title.class_     { color: var(--hl-builtin); }
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property         { color: var(--hl-attr); }
+
+.hljs-tag,
+.hljs-selector-id,
+.hljs-selector-class   { color: var(--hl-tag); }
+
+.hljs-meta,
+.hljs-comment.hljs-doctag { color: var(--hl-meta); }
+
+.hljs-emphasis         { font-style: italic; }
+.hljs-strong           { font-weight: 700; }
+
+/* ══════════════════════════════════════════════════
+   헤더 토글 (접기/펼치기)
+   ══════════════════════════════════════════════════ */
+.post-body .toggle-header {
+  cursor: pointer;
+  user-select: none;
+}
+/* 왼쪽 셰브론 — 헤더 텍스트 앞에 인라인으로 붙음 */
+.post-body .toggle-header::before {
+  content: '▾';
+  display: inline-block;
+  width: 0.9em;
+  margin-right: 0.35em;
+  color: var(--text-muted);
+  font-size: 0.8em;
+  transition: transform 0.15s ease;
+}
+/* 접힌 상태: 셰브론 회전 */
+.post-body .toggle-header.collapsed::before {
+  transform: rotate(-90deg);
+}
+.post-body .toggle-header:hover::before {
+  color: var(--accent);
+}
+
+/* 접힌 내용 숨김 */
+.post-body .toggle-content.collapsed {
+  display: none;
+}

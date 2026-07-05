@@ -27,6 +27,7 @@ import Search      from './modules/search.js';
 import Renderer    from './modules/renderer.js';
 import Markdown    from './modules/markdown.js';
 import Toc         from './modules/toc.js';
+import PostEnhance from './modules/post-enhance.js';
 import MusicPlayer from './modules/music-player.js';
 import Graph       from './modules/graph.js';
 
@@ -137,6 +138,9 @@ App.on('router:post', async ({ file }) => {
 
     // ToC는 본문 삽입 후에 빌드해야 합니다
     Toc.build();
+
+    // 코드 하이라이팅 + 헤더 토글 (ToC 이후에 실행 — heading id 유지됨)
+    PostEnhance.apply(bodyEl);
 
   } catch (err) {
     console.error('[app-index] 포스트 로딩 실패:', err);
