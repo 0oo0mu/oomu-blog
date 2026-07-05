@@ -1,0 +1,55 @@
+name: Deploy to GitHub Pages
+
+# main에 push될 때마다 실행 (수동 실행도 가능)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Pages 배포에 필요한 권한
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시에 하나의 배포만 진행 (진행 중이던 이전 배포는 취소 → 멈춘 배포 자동 정리)
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # ── 빌드: posts.json 등을 생성하고 사이트 전체를 아티팩트로 업로드 ──
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build (posts.json 자동 생성)
+        run: node build.js
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 루트에서 서빙되는 정적 사이트라 저장소 전체를 업로드
+          path: .
+
+  # ── 배포: 업로드된 아티팩트를 GitHub Pages에 게시 ──
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
