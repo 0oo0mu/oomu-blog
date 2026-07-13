@@ -11,6 +11,38 @@
     "excerpt": "Step 01 — 기본 Win32 창 띄우기 파일: Mevolve/Main.cpp · 계층: Platform / UI (Windows 전용, Core 아님) --- 1. 이번 단계 목표 아무 기능 없이 회색 배경에 텍스트가 가운데 찍힌 800×600 창을 하나 띄운다...."
   },
   {
+    "file": "개발/C++/step02_버튼_클릭이벤트.md",
+    "title": "Step02_버튼_클릭이벤트",
+    "date": "2026-07-13",
+    "category": "개발/C++",
+    "tags": [],
+    "excerpt": "Step 02 — 버튼 추가 + 클릭 이벤트 처리 파일: Mevolve/Main.cpp · 계층: Platform / UI --- 1. 이번 단계 목표 Step 01의 창에 \"클릭하세요\" 버튼을 붙이고, 누를 때마다 화면 가운데 문구가 버튼을 1번 눌렀어요, 2번…으로..."
+  },
+  {
+    "file": "개발/C++/step03_입력창_edit컨트롤.md",
+    "title": "Step03_입력창_Edit컨트롤",
+    "date": "2026-07-13",
+    "category": "개발/C++",
+    "tags": [],
+    "excerpt": "Step 03 — 텍스트 입력창(Edit 컨트롤) + 내용 읽기 파일: Mevolve/Main.cpp · 계층: Platform / UI --- 1. 이번 단계 목표 창에 여러 줄 입력이 가능한 텍스트 입력창(Edit 컨트롤)을 붙이고, \"내용 확인\" 버튼을 누르면 입..."
+  },
+  {
+    "file": "개발/C++/step04_메모_파일저장_불러오기.md",
+    "title": "Step04_메모_파일저장_불러오기",
+    "date": "2026-07-13",
+    "category": "개발/C++",
+    "tags": [],
+    "excerpt": "Step 04 — 메모 파일 저장/불러오기 (파일 I/O · Data 계층 첫 등장) 파일: Mevolve/Main.cpp · 계층: Data(저장/인코딩) + UI(버튼 처리) --- 1. 이번 단계 목표 입력창의 메모를 파일(memo.txt)로 저장하고, 프로그램을..."
+  },
+  {
+    "file": "개발/C++/step05_appdata_경로이전.md",
+    "title": "Step05_AppData_경로이전",
+    "date": "2026-07-13",
+    "category": "개발/C++",
+    "tags": [],
+    "excerpt": "Step 05 — 저장 위치를 사용자 폴더(AppData)로 이전 파일: Mevolve/Main.cpp · 계층: Data(경로) + UI --- 1. 이번 단계 목표 메모 저장 파일을 작업 폴더가 아니라 사용자별 정식 위치 ...\\AppData\\Roaming\\Mevo..."
+  },
+  {
     "file": "독후감/책01_호감이 전략을 이긴다.md",
     "title": "호감이 전략을 이긴다",
     "date": "2026-07-07",
