@@ -323,6 +323,18 @@ console.log('\nposts/posts.json 생성됨 (' + posts.length + '개 포스트)');
 
 // categories.json 저장 — 폴더 기반 전체 카테고리(빈 폴더 포함)
 const categoryDirs = findCategoryDirs(POSTS_DIR);
+
+// 빈 카테고리 폴더에 .gitkeep 생성
+// git은 빈 폴더를 추적하지 않으므로, 파일이 하나도 없는 폴더에 빈 .gitkeep을 넣어
+// 저장소에 폴더가 포함되게 하고 배포 시에도 카테고리로 유지되도록 합니다.
+categoryDirs.forEach(rel => {
+  const abs = path.join(POSTS_DIR, rel);
+  const hasFile = fs.readdirSync(abs, { withFileTypes: true }).some(e => e.isFile());
+  if (!hasFile) {
+    fs.writeFileSync(path.join(abs, '.gitkeep'), '', 'utf-8');
+    console.log('  ✅ .gitkeep 생성: posts/' + rel + ' (빈 카테고리 유지용)');
+  }
+});
 fs.writeFileSync(
   path.join(POSTS_DIR, 'categories.json'),
   JSON.stringify(categoryDirs, null, 2),
