@@ -1,7 +1,7 @@
 ---
 title: Step01_기본창
 date: 2026-07-13
-category: C++
+category: 개발/C++
 tags: [C++, 공부]
 ---
 
