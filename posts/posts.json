@@ -1,5 +1,16 @@
 [
   {
+    "file": "개발/C++/step01_기본창.md",
+    "title": "Step01_기본창",
+    "date": "2026-07-13",
+    "category": "C++",
+    "tags": [
+      "C++",
+      "공부"
+    ],
+    "excerpt": "Step 01 — 기본 Win32 창 띄우기 파일: Mevolve/Main.cpp · 계층: Platform / UI (Windows 전용, Core 아님) --- 1. 이번 단계 목표 아무 기능 없이 회색 배경에 텍스트가 가운데 찍힌 800×600 창을 하나 띄운다...."
+  },
+  {
     "file": "독후감/책01_호감이 전략을 이긴다.md",
     "title": "호감이 전략을 이긴다",
     "date": "2026-07-07",
