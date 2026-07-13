@@ -62,6 +62,23 @@ function findMarkdownFiles(dir, baseDir = dir) {
   return files;
 }
 
+/**
+ * posts/ 아래의 모든 하위 폴더 경로를 반환합니다. (글이 없는 빈 폴더도 포함)
+ * → 게시글이 하나도 없어도 카테고리(폴더)를 사이드바에 표시하기 위한 목록.
+ */
+function findCategoryDirs(dir, baseDir = dir) {
+  const dirs = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      const fullPath = path.join(dir, entry.name);
+      const rel = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+      dirs.push(rel);
+      dirs.push(...findCategoryDirs(fullPath, baseDir));
+    }
+  }
+  return dirs;
+}
+
 // ══════════════════════════════════════════════════════
 // [2] Front Matter 파싱
 // ══════════════════════════════════════════════════════
@@ -303,6 +320,15 @@ posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 // posts.json 저장
 fs.writeFileSync(OUTPUT, JSON.stringify(posts, null, 2), 'utf-8');
 console.log('\nposts/posts.json 생성됨 (' + posts.length + '개 포스트)');
+
+// categories.json 저장 — 폴더 기반 전체 카테고리(빈 폴더 포함)
+const categoryDirs = findCategoryDirs(POSTS_DIR);
+fs.writeFileSync(
+  path.join(POSTS_DIR, 'categories.json'),
+  JSON.stringify(categoryDirs, null, 2),
+  'utf-8'
+);
+console.log('posts/categories.json 생성됨 (' + categoryDirs.length + '개 폴더)');
 
 // 부가 파일 생성
 console.log('\n부가 파일 생성 중...');

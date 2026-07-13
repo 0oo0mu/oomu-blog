@@ -23,6 +23,8 @@ import App from '../core/app.js';
 
 /** 캐시: 한 번 불러온 포스트는 재요청하지 않음 */
 let _cache = null;
+/** 캐시: 폴더 기반 카테고리 목록(빈 폴더 포함) */
+let _catCache = null;
 
 const PostsLoader = {
   /**
@@ -34,7 +36,7 @@ const PostsLoader = {
   async load() {
     // 캐시 있으면 재사용
     if (_cache) {
-      App.emit('posts:loaded', { posts: _cache });
+      App.emit('posts:loaded', { posts: _cache, categories: _catCache || [] });
       return _cache;
     }
 
@@ -47,8 +49,16 @@ const PostsLoader = {
       // 날짜 내림차순 정렬 (최신 글이 먼저)
       posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+      // 폴더 기반 카테고리 목록(빈 폴더 포함) — 없으면 빈 배열로 폴백
+      let categories = [];
+      try {
+        const cres = await fetch('posts/categories.json');
+        if (cres.ok) categories = await cres.json();
+      } catch (_) { /* categories.json 없어도 정상 동작 */ }
+
       _cache = posts;
-      App.emit('posts:loaded', { posts });
+      _catCache = categories;
+      App.emit('posts:loaded', { posts, categories });
       return posts;
 
     } catch (error) {

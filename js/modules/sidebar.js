@@ -28,9 +28,10 @@ const Sidebar = {
    * App.register('sidebar', Sidebar) 시 자동 호출됩니다.
    */
   init() {
-    App.on('posts:loaded', ({ posts }) => {
+    App.on('posts:loaded', ({ posts, categories }) => {
       this._allPosts = posts;
-      this._build(posts);
+      this._categories = categories || [];
+      this._build(posts, this._categories);
     });
 
     // 모바일 토글 버튼
@@ -47,8 +48,9 @@ const Sidebar = {
   /**
    * 포스트 목록에서 카테고리 트리를 빌드하고 DOM에 렌더링합니다.
    * @param {Post[]} posts
+   * @param {string[]} [categories] - 폴더 기반 카테고리 목록(빈 폴더 포함)
    */
-  _build(posts) {
+  _build(posts, categories = []) {
     const treeEl = document.getElementById('categoryTree');
     if (!treeEl) return;
 
@@ -85,6 +87,18 @@ const Sidebar = {
         // 마지막 파트에만 직접 포스트 수 +1
         if (depth === parts.length - 1) {
           node._children[part]._posts++;
+        }
+        node = node._children[part];
+      });
+    });
+
+    // ── 폴더 기반 카테고리 병합 (글이 없는 빈 폴더도 트리에 표시) ──
+    categories.forEach(cat => {
+      const parts = cat.split('/').filter(Boolean);
+      let node = root;
+      parts.forEach(part => {
+        if (!node._children[part]) {
+          node._children[part] = { _posts: 0, _children: {} };
         }
         node = node._children[part];
       });

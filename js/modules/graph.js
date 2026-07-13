@@ -27,8 +27,9 @@ const Graph = {
 
   init() {
     // 포스트 데이터 수신 → 미니 그래프 초기 렌더
-    App.on('posts:loaded', ({ posts }) => {
+    App.on('posts:loaded', ({ posts, categories }) => {
       this._posts = posts;
+      this._categories = categories || [];
       // D3 로드 후 미니 그래프 그리기
       this._loadD3().then(() => {
         this._d3 = window.d3;
@@ -182,6 +183,15 @@ const Graph = {
     posts.forEach(p => {
       if (!p.category) return;
       p.category.split('/').reduce((acc, part) => {
+        const full = acc ? `${acc}/${part}` : part;
+        catSet.add(full);
+        return full;
+      }, '');
+    });
+
+    // 폴더 기반 빈 카테고리도 포함 (글이 없어도 카테고리 노드로 표시)
+    (this._categories || []).forEach(cat => {
+      cat.split('/').reduce((acc, part) => {
         const full = acc ? `${acc}/${part}` : part;
         catSet.add(full);
         return full;
@@ -469,6 +479,15 @@ const Graph = {
       posts.forEach(p => {
         if (!p.category) return;
         p.category.split('/').reduce((acc, part) => {
+          const full = acc ? `${acc}/${part}` : part;
+          catSet.add(full);
+          return full;
+        }, '');
+      });
+
+      // 폴더 기반 빈 카테고리도 포함 (글이 없어도 카테고리 노드로 표시)
+      (this._categories || []).forEach(cat => {
+        cat.split('/').reduce((acc, part) => {
           const full = acc ? `${acc}/${part}` : part;
           catSet.add(full);
           return full;
