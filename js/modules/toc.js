@@ -113,27 +113,42 @@ const Toc = {
    * @param {HTMLElement} tocList - 목차 ul 요소
    */
   _updateActive(tocList) {
+    if (!this._headings.length) return;
+
     // 헤더 높이 (CSS 변수에서 읽거나 60px로 폴백)
     const headerHeight = parseInt(
       getComputedStyle(document.documentElement).getPropertyValue('--header-height') || '60'
     );
-    // 스크롤 기준선: 헤더 바로 아래 + 16px 여유
-    const threshold = window.scrollY + headerHeight + 16;
 
-    // 기준선을 지나친 heading을 모두 찾고, 그 중 가장 아래 것(= 현재 섹션)
+    // 판정 기준선을 화면 맨 위가 아니라 "읽는 지점"(헤더 아래 영역의 약 40% 지점)에 둡니다.
+    // → 화면 위쪽 끝이 아니라, 지금 화면을 채우고 있는 섹션이 하이라이트됩니다.
+    //   (섹션 5처럼 아래쪽이 긴 경우에도 자연스럽게 따라옴)
+    const READING_RATIO = 0.4;
+    const readingLine = window.scrollY + headerHeight
+                      + (window.innerHeight - headerHeight) * READING_RATIO;
+
+    // 기준선을 지나친 heading 중 가장 아래 것(= 현재 섹션)
     let activeId = null;
     for (const heading of this._headings) {
-      // offsetTop: 페이지 최상단으로부터의 거리
-      if (heading.offsetTop <= threshold) {
+      if (heading.offsetTop <= readingLine) {
         activeId = heading.id;
       } else {
         break; // heading들이 위→아래 순서이므로 넘으면 더 볼 필요 없음
       }
     }
 
-    if (activeId) {
-      this._setActive(tocList, activeId);
+    // 페이지 끝까지 스크롤했으면 마지막 섹션을 활성화
+    // (짧은 마지막 섹션은 heading이 기준선까지 못 올라와 하이라이트가 안 되는 문제 보정)
+    const atBottom = window.innerHeight + window.scrollY
+                   >= document.documentElement.scrollHeight - 2;
+    if (atBottom) {
+      activeId = this._headings[this._headings.length - 1].id;
     }
+
+    // 아직 첫 섹션 기준선에도 못 미쳤으면 첫 섹션을 활성화
+    if (!activeId) activeId = this._headings[0].id;
+
+    this._setActive(tocList, activeId);
   },
 
   /**
