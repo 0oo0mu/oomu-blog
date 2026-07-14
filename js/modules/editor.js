@@ -92,15 +92,23 @@ const Editor = {
     });
 
     // 카테고리 목록 로드
-    let categories = [];
+    //   posts.json     → 글이 있는 카테고리
+    //   categories.json → 폴더 기반(글 없는 빈 카테고리 포함)
+    // 둘을 합쳐야 "잡다"처럼 글 없는 빈 카테고리도 드롭다운에 나옵니다.
+    const catSet = new Set();
     try {
       const res  = await fetch('posts/posts.json', { cache: 'no-store' });
       const data = await res.json();
-      categories = [...new Set(data.map(p => p.category).filter(Boolean))].sort();
+      data.forEach(p => { if (p.category) catSet.add(p.category); });
     } catch (err) {
       // file://로 열면 fetch가 막힘 → 직접 입력만으로 폴백
       console.warn('[Editor] posts.json 로드 실패, 직접 입력만 사용:', err.message);
     }
+    try {
+      const cres = await fetch('posts/categories.json', { cache: 'no-store' });
+      if (cres.ok) (await cres.json()).forEach(c => { if (c) catSet.add(c); });
+    } catch (_) { /* categories.json 없어도 무방 */ }
+    const categories = [...catSet].sort();
 
     const opts = [
       `<option value="">(파일 경로에서 자동)</option>`,
