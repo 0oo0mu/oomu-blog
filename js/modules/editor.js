@@ -273,9 +273,10 @@ const Editor = {
   /** GitHub 설정을 localStorage에서 가져옵니다. */
   _getGitHubSettings() {
     return {
-      token:  localStorage.getItem('gh_token')  || '',
-      owner:  localStorage.getItem('gh_owner')  || '',
-      repo:   localStorage.getItem('gh_repo')   || '',
+      // 토큰은 잠금 해제된 세션(EditorAuth)에서 가져옵니다. (평문 저장 안 함)
+      token:  (window.EditorAuth && window.EditorAuth.getToken()) || localStorage.getItem('gh_token') || '',
+      owner:  localStorage.getItem('gh_owner')  || '0oo0mu',
+      repo:   localStorage.getItem('gh_repo')   || 'oomu-blog',
       branch: localStorage.getItem('gh_branch') || 'main',
     };
   },

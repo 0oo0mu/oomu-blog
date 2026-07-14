@@ -37,7 +37,7 @@ Accent.init();
 
 // ── 로컬 환경에서만 글쓰기 버튼 표시 ──
 const writeBtn = document.getElementById('writeBtn');
-if (writeBtn && !Env.isLocal) writeBtn.style.display = 'none';
+// 글쓰기 버튼은 항상 표시 (에디터 진입 시 비번 잠금이 보호)
 
 // ── 사이드바 로고 클릭: SPA 라우터로 목록 뷰 복귀 ──
 document.getElementById('siteLogo')?.addEventListener('click', (e) => {

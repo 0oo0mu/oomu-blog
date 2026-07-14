@@ -53,9 +53,7 @@ searchInput?.addEventListener('input', () => {
 
 // ── 환경에 따라 글쓰기 버튼 표시/숨김 ──
 const writeBtn = document.getElementById('writeBtn');
-if (writeBtn && !Env.isLocal) {
-  writeBtn.style.display = 'none';
-}
+// 글쓰기 버튼은 항상 표시 (에디터 진입 시 비번 잠금이 보호)
 
 // ── URL에서 파일 경로 읽기 ──
 const params = new URLSearchParams(window.location.search);

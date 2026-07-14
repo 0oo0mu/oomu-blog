@@ -403,3 +403,114 @@
     grid-column: 1;
   }
 }
+
+/* ══════════════════════════════════════════════════
+   에디터 잠금화면 + 세션바 (editor-auth.js)
+   ══════════════════════════════════════════════════ */
+#authOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;            /* JS가 flex로 전환 */
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+.auth-box {
+  width: min(92vw, 380px);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.auth-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 0.75rem;
+}
+.auth-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+.auth-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.auth-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.auth-btn {
+  width: 100%;
+  padding: 0.6rem;
+  margin-top: 0.25rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-btn:hover { filter: brightness(1.08); }
+.auth-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.auth-link:hover { color: var(--accent); }
+.auth-error {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.82rem;
+}
+
+/* 세션바 (우상단 고정) */
+#authSessionBar {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 9000;
+  display: none;            /* JS가 flex로 전환 */
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.auth-remain-wrap { font-variant-numeric: tabular-nums; }
+.auth-mini-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.1rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.auth-mini-btn:hover { color: var(--accent); border-color: var(--accent); }
