@@ -331,6 +331,25 @@ const Editor = {
   },
 
   /**
+   * 게시할 파일 경로(posts/ 기준 상대경로)를 결정합니다.
+   *   - 파일명 칸에 직접 넣었으면 그 값을 사용(고급/override)
+   *   - 비어 있으면 "카테고리/제목-슬러그.md" 로 자동 생성
+   *     → 폴더가 항상 카테고리와 일치하므로 어긋남이 생기지 않습니다.
+   */
+  _resolveRelPath() {
+    const manual = document.getElementById('filenameInput')?.value.trim();
+    if (manual) return manual.endsWith('.md') ? manual : manual + '.md';
+
+    const { category, title } = this._getFormValues();
+    const slug = (title || '새-글')
+      .toLowerCase()
+      .replace(/[^\w\s가-힣]/g, '')
+      .replace(/\s+/g, '-')
+      .slice(0, 50);
+    return (category ? category + '/' : '') + slug + '.md';
+  },
+
+  /**
    * GitHub API를 통해 글을 저장소에 직접 커밋합니다.
    *
    * 흐름:
@@ -350,14 +369,14 @@ const Editor = {
       return;
     }
 
-    const filenameInput = document.getElementById('filenameInput')?.value.trim();
-    if (!filenameInput) {
-      showToast('📁 파일 경로를 입력하세요 (예: 개발/hello.md)');
-      document.getElementById('filenameInput')?.focus();
+    const relPath = this._resolveRelPath();
+    if (!relPath || relPath === '.md' || relPath === '새-글.md') {
+      showToast('📝 제목을 입력하거나(자동 경로) 파일 경로를 지정하세요');
+      document.getElementById('fmTitle')?.focus();
       return;
     }
 
-    const filePath = `posts/${filenameInput.endsWith('.md') ? filenameInput : filenameInput + '.md'}`;
+    const filePath = `posts/${relPath}`;
     const content  = this._buildFileContent();
     const title    = document.getElementById('fmTitle')?.value.trim() || '새 글';
 
