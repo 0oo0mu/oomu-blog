@@ -514,3 +514,14 @@
   cursor: pointer;
 }
 .auth-mini-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+
+/* 삭제(위험) 버튼 */
+.toolbar-btn.danger {
+  color: #ef4444;
+  border-color: color-mix(in srgb, #ef4444 45%, var(--border));
+}
+.toolbar-btn.danger:hover {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border-color: #ef4444;
+}

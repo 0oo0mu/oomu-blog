@@ -98,7 +98,7 @@ function _setMeta(attr, name, content) {
 }
 
 /** 포스트 헤더(제목, 날짜, 카테고리, 태그)를 렌더링합니다. */
-function renderPostHeader(meta) {
+function renderPostHeader(meta, file) {
   const header = document.getElementById('postHeader');
   if (!header) return;
   header.innerHTML = `
@@ -109,6 +109,7 @@ function renderPostHeader(meta) {
       <div class="post-tags">
         ${(meta.tags || []).map(t => `<span class="post-tag">#${t}</span>`).join('')}
       </div>
+      <a class="post-edit-btn" href="editor.html?edit=${encodeURIComponent(file)}" title="이 글 수정" style="font-size:.78rem;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;margin-left:auto;white-space:nowrap">✏️ 수정</a>
     </div>
   `;
 }
@@ -132,7 +133,7 @@ App.on('router:post', async ({ file }) => {
 
     const { meta, content } = Markdown.parseFrontMatter(raw);
 
-    renderPostHeader(meta);
+    renderPostHeader(meta, file);
     updateSeoMeta(meta, file);
     bodyEl.innerHTML = Markdown.parse(content);
 

@@ -22,18 +22,20 @@ const Editor = {
    * 에디터를 초기화합니다.
    * DOM이 준비된 후 호출해야 합니다.
    */
-  init() {
+  async init() {
     this._bindFormPreview();   // Front Matter 변경 → 미리보기 업데이트
-    this._bindCategoryDropdown(); // 카테고리 드롭다운 (posts.json 연동)
+    await this._bindCategoryDropdown(); // 카테고리 드롭다운 (posts.json 연동)
     this._bindTextarea();      // 본문 입력 → 미리보기 업데이트
     this._bindFormatBtns();    // 서식 버튼 클릭
     this._bindSaveBtn();       // 로컬 저장 버튼
     this._bindPublishBtn();    // GitHub 게시 버튼
+    this._bindDeleteBtn();     // GitHub 삭제 버튼(수정 중일 때만)
     this._bindNewBtn();        // 새 글 버튼
     this._bindGitHubSettings();// GitHub 설정 패널
     this._setDefaultDate();    // 날짜 기본값: 오늘
     this._updatePreview();     // 초기 미리보기
     this._applyGitHubSettingsToUI(); // 저장된 설정 복원
+    await this._loadEditParam();     // ?edit=경로 있으면 기존 글 불러오기(수정)
   },
 
   // ══════════════════════════════════════════════════════
@@ -107,6 +109,54 @@ const Editor = {
     ];
     select.innerHTML = opts.join('');
     textInput.style.display = 'none'; // 시작은 드롭다운 모드
+  },
+
+  /**
+   * URL에 ?edit=경로 가 있으면 기존 글을 불러와 폼에 채웁니다. (게시글 수정)
+   * 파일명 칸에 원래 경로가 채워지므로, 게시하면 GitHub의 같은 파일을 덮어씁니다.
+   */
+  async _loadEditParam() {
+    const params = new URLSearchParams(location.search);
+    const file = params.get('edit') || params.get('file');
+    if (!file) return;
+    try {
+      const res = await fetch('posts/' + file, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const { meta, content } = Markdown.parseFrontMatter(await res.text());
+
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('fmTitle',        meta.title   || '');
+      set('fmDate',         meta.date    || '');
+      set('fmTags',         (meta.tags   || []).join(', '));
+      set('fmExcerpt',      meta.excerpt || '');
+      set('editorTextarea', content.replace(/^\n+/, ''));
+      set('filenameInput',  file);   // 같은 파일 덮어쓰기
+
+      // 카테고리: 드롭다운에 있으면 선택, 없으면 직접입력으로 표시
+      const catSel = document.getElementById('fmCategorySelect');
+      const catInput = document.getElementById('fmCategory');
+      if (catInput) catInput.value = meta.category || '';
+      if (catSel) {
+        catSel.value = meta.category || '';
+        if (catSel.value !== (meta.category || '')) {
+          if ([...catSel.options].some(o => o.value === '__new__')) catSel.value = '__new__';
+          if (catInput) catInput.style.display = '';
+        } else if (catInput) {
+          catInput.style.display = 'none';
+        }
+      }
+
+      const pub = document.getElementById('publishBtn');
+      if (pub) pub.innerHTML = '🚀 수정 게시';
+      const del = document.getElementById('deleteBtn');
+      if (del) del.style.display = '';   // 수정 모드에서만 삭제 버튼 표시
+
+      this._updatePreview();
+      showToast('✏️ 기존 글 불러옴: ' + file);
+    } catch (e) {
+      console.error('[Editor] 수정 불러오기 실패:', e);
+      showToast('불러오기 실패: ' + e.message);
+    }
   },
 
   /**
@@ -434,6 +484,82 @@ const Editor = {
         showToast('❌ 저장소를 찾을 수 없습니다. owner/repo를 확인하세요.');
       } else {
         showToast('❌ 게시 실패: ' + err.message);
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+    }
+  },
+
+  /** 삭제 버튼 클릭 이벤트 연결 */
+  _bindDeleteBtn() {
+    document.getElementById('deleteBtn')
+      ?.addEventListener('click', () => this._deleteFromGitHub());
+  },
+
+  /**
+   * GitHub API로 현재 불러온 글 파일을 저장소에서 삭제합니다.
+   *   1. 파일 경로 확인(수정으로 불러온 글만 대상)
+   *   2. 파일 SHA 조회
+   *   3. DELETE /repos/{owner}/{repo}/contents/{path}
+   *   4. GitHub Actions가 자동 재배포 → 목록으로 이동
+   */
+  async _deleteFromGitHub() {
+    const { token, owner, repo, branch } = this._getGitHubSettings();
+    if (!token || !owner || !repo) {
+      showToast('⚙️ 먼저 GitHub 설정을 입력하세요 (⚙️ 버튼)');
+      document.getElementById('ghSettingsPanel')?.classList.add('open');
+      return;
+    }
+
+    const manual = document.getElementById('filenameInput')?.value.trim();
+    if (!manual) {
+      showToast('🗑️ 삭제할 글이 없습니다. (수정으로 불러온 글만 삭제 가능)');
+      return;
+    }
+    const relPath  = manual.endsWith('.md') ? manual : manual + '.md';
+    const filePath = `posts/${relPath}`;
+
+    if (!confirm(`정말 삭제할까요?\n\n${filePath}\n\n(되돌리려면 git 기록에서 복구해야 합니다)`)) return;
+
+    const btn = document.getElementById('deleteBtn');
+    const origText = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 삭제 중...'; }
+
+    try {
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type':  'application/json',
+        'Accept':        'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      };
+      const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+
+      // 파일 SHA 조회 (삭제에 필수)
+      const getRes = await fetch(`${apiBase}?ref=${branch}`, { headers });
+      if (getRes.status === 404) { showToast('❌ 저장소에 그 파일이 없습니다.'); return; }
+      if (!getRes.ok) throw new Error(`HTTP ${getRes.status}`);
+      const { sha } = await getRes.json();
+
+      // 삭제
+      const delRes = await fetch(apiBase, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({ message: `글 삭제: ${relPath}`, sha, branch }),
+      });
+      if (!delRes.ok) {
+        const e = await delRes.json();
+        throw new Error(e.message || `HTTP ${delRes.status}`);
+      }
+
+      showToast('🗑️ 삭제 완료! 1~2분 내 반영됩니다. 목록으로 이동합니다.', 4000);
+      setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+
+    } catch (err) {
+      console.error('[Editor] 삭제 실패:', err);
+      if (err.message.includes('Bad credentials')) {
+        showToast('❌ 토큰이 잘못되었습니다.');
+      } else {
+        showToast('❌ 삭제 실패: ' + err.message);
       }
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = origText; }

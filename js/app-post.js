@@ -157,6 +157,7 @@ function renderHeader(meta) {
     <div class="post-card-meta">
       <span class="post-date">${formatDate(meta.date)}</span>
       <div class="post-tags">${tagsHTML}</div>
+      <a class="post-edit-btn" href="editor.html?edit=${encodeURIComponent(file)}" title="이 글 수정" style="font-size:.78rem;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;margin-left:auto;white-space:nowrap">✏️ 수정</a>
     </div>
   `;
 }
