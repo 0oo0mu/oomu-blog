@@ -23,8 +23,36 @@ const Markdown = {
       console.error('[Markdown] marked.js가 로드되지 않았습니다.');
       return `<p>마크다운 파서를 불러올 수 없습니다.</p>`;
     }
-    return window.marked.parse(mdText);
+    return window.marked.parse(this._fixSpacedEmphasis(mdText));
   },
+
+  /**
+   * 별표 안쪽 공백 허용: "** 굵게 **", "* 기울임 *" 도 인식되게 전처리합니다.
+   * (마크다운 표준은 별표 안쪽 공백을 허용하지 않지만, 편의를 위해 트림)
+   * - 코드(펜스 ```, 인라인 `)는 보호 → 그 안의 *는 안 건드림
+   * - 글자(한글/영문)가 있는 경우만 처리 → 곱셈(2 * 3) 등 숫자·기호는 안 건드림
+   */
+  _fixSpacedEmphasis(md) {
+    if (typeof md !== 'string') return md;
+    const NUL = String.fromCharCode(0);
+    const codes = [];
+    // 1) 코드 보호
+    md = md.replace(/```[\s\S]*?```|`[^`\n]*`/g, m => {
+      codes.push(m);
+      return ' ' + NUL + (codes.length - 1) + NUL + ' ';
+    });
+    const hasWord = s => /[A-Za-z가-힣]/.test(s);
+    // 2) 굵게: ** 텍스트 ** → **텍스트**
+    md = md.replace(/\*\*[ \t]*([^*\n]+?)[ \t]*\*\*/g, (m, inner) =>
+      hasWord(inner) ? '**' + inner.trim() + '**' : m);
+    // 3) 기울임: * 텍스트 * → *텍스트* (** 은 제외)
+    md = md.replace(/(^|[^*])\*[ \t]*([^*\n]+?)[ \t]*\*(?!\*)/g, (m, pre, inner) =>
+      hasWord(inner) ? pre + '*' + inner.trim() + '*' : m);
+    // 4) 코드 복원
+    const re = new RegExp(' ' + NUL + '(\\d+)' + NUL + ' ', 'g');
+    return md.replace(re, (_, i) => codes[+i]);
+  },
+
 
   /**
    * 마크다운 파일 맨 위의 Front Matter를 파싱합니다.
