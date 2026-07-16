@@ -157,7 +157,9 @@ function renderHeader(meta) {
     <div class="post-card-meta">
       <span class="post-date">${formatDate(meta.date)}</span>
       <div class="post-tags">${tagsHTML}</div>
-      <a class="post-edit-btn" href="editor.html?edit=${encodeURIComponent(file)}" title="이 글 수정" style="font-size:.78rem;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;margin-left:auto;white-space:nowrap">✏️ 수정</a>
+      <button class="post-edit-btn" id="collapseAllBtn" title="목차 모두 접기" style="font-size:.78rem;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;white-space:nowrap;cursor:pointer;margin-left:auto">⊟ 접기</button>
+      <button class="post-edit-btn" id="expandAllBtn" title="목차 모두 펼치기" style="font-size:.78rem;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;white-space:nowrap;cursor:pointer">⊞ 펼치기</button>
+      <a class="post-edit-btn" href="editor.html?edit=${encodeURIComponent(file)}" title="이 글 수정" style="font-size:.78rem;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:6px;padding:.15rem .55rem;white-space:nowrap;cursor:pointer;text-decoration:none">✏️ 수정</a>
     </div>
   `;
 }
@@ -189,7 +191,7 @@ async function loadPost() {
     Toc.build();
 
     // 코드 하이라이팅 + 헤더 토글 (ToC 이후에 실행 — heading id 유지됨)
-    PostEnhance.apply(bodyEl);
+    PostEnhance.apply(bodyEl, true);
 
   } catch (err) {
     console.error('[app-post] 포스트 로딩 실패:', err);

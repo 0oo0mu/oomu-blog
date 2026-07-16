@@ -27,10 +27,25 @@ const PostEnhance = {
    * 본문 컨테이너에 하이라이팅 + 헤더 토글을 적용합니다.
    * @param {HTMLElement} bodyEl - 포스트 본문 요소 (#postBody)
    */
-  apply(bodyEl) {
+  apply(bodyEl, defaultCollapsed = false) {
     if (!bodyEl) return;
     this._highlightCode(bodyEl);
-    this._makeCollapsibleHeaders(bodyEl);
+    this._makeCollapsibleHeaders(bodyEl, defaultCollapsed);
+    this._bindCollapseButtons(bodyEl);
+  },
+
+  /** 본문의 모든 헤더 토글을 한 번에 접거나 펼칩니다. */
+  _setAllCollapsed(bodyEl, collapsed) {
+    bodyEl.querySelectorAll('.toggle-header').forEach(h => h.classList.toggle('collapsed', collapsed));
+    bodyEl.querySelectorAll('.toggle-content').forEach(c => c.classList.toggle('collapsed', collapsed));
+  },
+
+  /** 헤더의 "모두 접기 / 모두 펼치기" 버튼을 연결합니다. (없으면 무시) */
+  _bindCollapseButtons(bodyEl) {
+    const cbtn = document.getElementById('collapseAllBtn');
+    const ebtn = document.getElementById('expandAllBtn');
+    if (cbtn) cbtn.onclick = () => this._setAllCollapsed(bodyEl, true);
+    if (ebtn) ebtn.onclick = () => this._setAllCollapsed(bodyEl, false);
   },
 
   // ══════════════════════════════════════════════════════
@@ -109,7 +124,7 @@ const PostEnhance = {
   // [2] 헤더 토글 (접기/펼치기)
   // ══════════════════════════════════════════════════════
 
-  _makeCollapsibleHeaders(bodyEl) {
+  _makeCollapsibleHeaders(bodyEl, defaultCollapsed = false) {
     const headers = bodyEl.querySelectorAll('h2, h3, h4');
 
     headers.forEach(header => {
@@ -128,6 +143,10 @@ const PostEnhance = {
       content.forEach(el => wrapper.appendChild(el));
 
       header.classList.add('toggle-header');
+      if (defaultCollapsed) {                 // 기본 접힘 상태로 시작
+        header.classList.add('collapsed');
+        wrapper.classList.add('collapsed');
+      }
 
       // 클릭 → 접기/펼치기 토글
       header.addEventListener('click', () => {
